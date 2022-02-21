@@ -26,8 +26,8 @@ typedef uint32_t uint;
 
 int XRES = 800;
 int YRES = 600;
-double xBound = 1.6;
-double yBound = 1.2;
+double xBound = 1.3;
+double yBound = 2.3;
 bool left_button = false;
 
 map<string, GameObj> allGameObj;
@@ -269,17 +269,12 @@ void doMotion() {
                       allGameObj[Canna_OBJ].transform.position * middle, 
                       MainCamera.forward % left);
 
+    allGameObj[Amo_OBJ].applyForce(allGameObj[Amo_OBJ].transform.velocity.normalize() * (- 0.06));
     allGameObj[Amo_OBJ].move(deltaTime);
-    if (allGameObj[Amo_OBJ].transform.position.x > xBound)
-        allGameObj[Amo_OBJ].transform.position.x = xBound - 0.001;
-    else if (allGameObj[Amo_OBJ].transform.position.x < -xBound)
-        allGameObj[Amo_OBJ].transform.position.x = -xBound + 0.001;
-    if (allGameObj[Amo_OBJ].transform.position.y > yBound)
-        allGameObj[Amo_OBJ].transform.position.y = yBound - 0.001;
-    else if (allGameObj[Amo_OBJ].transform.position.y < -yBound) 
-        allGameObj[Amo_OBJ].transform.position.y = -yBound + 0.001;
-    if (allGameObj[Amo_OBJ].transform.position.z != 0.0)
-        allGameObj[Amo_OBJ].transform.position.z = 0.0;
+    allGameObj[Amo_OBJ].checkCollision(xBound, yBound, 0.0);
+    if (allGameObj[Canna_OBJ].transform.position.distance(allGameObj[Amo_OBJ].transform.position) > 0.5) {
+        allGameObj[Amo_OBJ].applyForce(allGameObj[Canna_OBJ].transform.position - allGameObj[Amo_OBJ].transform.position);
+    }
     
 
     /*
@@ -408,9 +403,6 @@ void drag_n_drop(int x, int y) {
         allGameObj[Rocchetto_OBJ].translate(delta);
         allGameObj[Pugno_OBJ].translate(delta);
         MainCamera.focus = allGameObj[Canna_OBJ].transform.position * 0.4;
-        if (allGameObj[Canna_OBJ].transform.position.distance(allGameObj[Amo_OBJ].transform.position) > 1.0) {
-            allGameObj[Amo_OBJ].applyForce(allGameObj[Canna_OBJ].transform.position - allGameObj[Amo_OBJ].transform.position);
-        }
 
         //std::cout << "Amo.vel(" << allGameObj[Amo_OBJ].transform.velocity.x << ", " << allGameObj[Amo_OBJ].transform.velocity.y << ")\n";
     }

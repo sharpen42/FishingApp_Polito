@@ -237,6 +237,33 @@ void GameObj::renderOpenGL() {
 	glPopMatrix();
 }
 
+bool GameObj::checkCollision(double xBound, double yBound, double zBound)
+{
+	bool t = false;
+	if (transform.position.x > xBound) {
+		transform.position.x = xBound - 0.001;
+		t = true;
+	} else if (transform.position.x < -xBound) {
+		transform.position.x = -xBound + 0.001;
+		t = true;
+	}
+	if (transform.position.y > yBound) {
+		transform.position.y = yBound - 0.001;
+		t = true;
+	} else if (transform.position.y < -yBound) {
+		transform.position.y = -yBound + 0.001;
+		t = true;
+	}
+	if (transform.position.z > zBound) {
+		transform.position.z = zBound - 0.001;
+		t = true;
+	} else if (transform.position.z < -zBound) {
+		transform.position.z = -zBound + 0.001;
+		t = true;
+	}
+	return t;
+}
+
 Camera::Camera() {
 	position = Vector3(-1, 0, 0);
 	focus = Vector3();
