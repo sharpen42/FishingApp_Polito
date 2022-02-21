@@ -103,7 +103,7 @@ public:
 
 class Mat3x3 {
 private:
-	double *elements;
+	double elements[9];
 public:
 	Mat3x3();
 	Mat3x3(double a[9]);
@@ -122,7 +122,7 @@ public:
 
 class Mat4x4 {
 private:
-	double *elements;
+	double elements[16];
 public:
 	Mat4x4();
 	Mat4x4(double a[16]);

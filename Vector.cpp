@@ -134,7 +134,6 @@ Vector3 Vector3::Polar(double R, double theta, double phi) {
 
 
 Mat3x3::Mat3x3() {
-	elements = new double[9];
 	for (int i = 0; i < 9; i++) {
 		if (i % 4 == 0) elements[i] = 1;
 		else elements[i] = 0;
@@ -142,7 +141,6 @@ Mat3x3::Mat3x3() {
 }
 //Mat3x3::~Mat3x3() { delete elements; }
 Mat3x3::Mat3x3(double a[9]) {
-	elements = new double[9];
 	for (int i = 0; i < 9; i++) {
 		elements[i] = a[i];
 	}
@@ -195,7 +193,6 @@ Mat3x3 Mat3x3::transpose()
 double* Mat3x3::toArray(){ return elements; }
 
 Mat4x4::Mat4x4() {
-	elements = new double[16];
 	for (int i = 0; i < 16; i++) {
 		if (i % 5 == 0) elements[i] = 1;
 		else elements[i] = 0;
@@ -204,7 +201,6 @@ Mat4x4::Mat4x4() {
 
 //Mat4x4::~Mat4x4() { delete elements; }
 Mat4x4::Mat4x4(double a[16]) {
-	elements = new double[16];
 	for (int i = 0; i < 9; i++){
 		elements[i] = a[i];
 	}
