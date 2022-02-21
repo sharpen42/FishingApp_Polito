@@ -220,6 +220,10 @@ bool init(string path) {
 
 void prepareScene() {
     allGameObj[Pugno_OBJ].hide();
+    //allGameObj[Pesce0_OBJ].hide();
+    //allGameObj[Pesce1_OBJ].hide();
+    //allGameObj[Pesce2_OBJ].hide();
+    //allGameObj[Pesce3_OBJ].hide();
 
     LightAmbient = ColorRGBA(127, 127, 127, 255);
     LightDiffuse = ColorRGBA(255, 255, 255, 255);
@@ -259,6 +263,7 @@ void doMotion() {
     static Vector3 left = Vector3(0, -1, 0);
     static int prev_time = 0;
     const float middle = 0.3;
+    double dist = 0.0;
     float deltaTime;
     int time = glutGet(GLUT_ELAPSED_TIME);
 
@@ -269,11 +274,13 @@ void doMotion() {
                       allGameObj[Canna_OBJ].transform.position * middle, 
                       MainCamera.forward % left);
 
-    allGameObj[Amo_OBJ].applyForce(allGameObj[Amo_OBJ].transform.velocity.normalize() * (- 0.06));
     allGameObj[Amo_OBJ].move(deltaTime);
     allGameObj[Amo_OBJ].checkCollision(xBound, yBound, 0.0);
-    if (allGameObj[Canna_OBJ].transform.position.distance(allGameObj[Amo_OBJ].transform.position) > 0.5) {
-        allGameObj[Amo_OBJ].applyForce(allGameObj[Canna_OBJ].transform.position - allGameObj[Amo_OBJ].transform.position);
+    dist = allGameObj[Canna_OBJ].transform.position.distance(allGameObj[Amo_OBJ].transform.position);
+    if (dist > 0.4) {
+        allGameObj[Amo_OBJ].setVelocity((allGameObj[Canna_OBJ].transform.position - allGameObj[Amo_OBJ].transform.position) * 0.4);
+    }  else if (dist < 0.1) {
+        allGameObj[Amo_OBJ].setVelocity((allGameObj[Canna_OBJ].transform.position - allGameObj[Amo_OBJ].transform.position) * 0.01);
     }
     
 
@@ -332,14 +339,14 @@ void processNormalKeys(unsigned char key, int x, int y) {
     n++;
     switch (key) { 
     // W A S D
-    case 'w':
+    case 'w': case 'W':
         break;
-    case 'a':
+    case 'a': case 'A':
         break;
-    case 's':
+    case 's': case 'S':
         break;
-    case 'd':
-        break;
+    case 'd': case 'D':
+        break; 
     // SPACE
     case ' ':
         break;

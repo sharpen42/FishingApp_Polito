@@ -38,7 +38,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd textures\\Carpa_8_texture.png
+map_Kd textures\Carpa_8_texture.png
 
 newmtl mat_laghetto
 Ns 225.000000
@@ -59,7 +59,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd textures\\Luccio_9_texture.png
+map_Kd textures\Luccio_9_texture.png
 
 newmtl mat_manico
 Ns 225.000000
@@ -90,7 +90,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd textures\\Persico_7_texture.png
+map_Kd textures\Persico_7_texture.png
 
 newmtl mat_rocchetto
 Ns 225.000000
@@ -111,7 +111,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd textures\\Trota_6_texture.png
+map_Kd textures\Trota_6_texture.png
 
 newmtl mat_vasca
 Ns 225.000000

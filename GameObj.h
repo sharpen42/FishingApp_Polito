@@ -55,6 +55,7 @@ public:
 	void show();
 	void renderOpenGL();
 	bool checkCollision(double bx, double by, double bz);
+	bool checkCollision(double xBound, double yBound, double zBound, Vector3 v);
 };
 
 class Camera {

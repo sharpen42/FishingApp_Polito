@@ -264,6 +264,36 @@ bool GameObj::checkCollision(double xBound, double yBound, double zBound)
 	return t;
 }
 
+bool GameObj::checkCollision(double xBound, double yBound, double zBound, Vector3 v)
+{
+	bool t = false;
+	if (transform.position.x > v.x + xBound) {
+		transform.position.x = xBound - 0.001;
+		t = true;
+	}
+	else if (transform.position.x < v.x - xBound) {
+		transform.position.x = -xBound + 0.001;
+		t = true;
+	}
+	if (transform.position.y > v.y + yBound) {
+		transform.position.y = yBound - 0.001;
+		t = true;
+	}
+	else if (transform.position.y < v.y - yBound) {
+		transform.position.y = -yBound + 0.001;
+		t = true;
+	}
+	if (transform.position.z > v.z + zBound) {
+		transform.position.z = zBound - 0.001;
+		t = true;
+	}
+	else if (transform.position.z < v.z - zBound) {
+		transform.position.z = -zBound + 0.001;
+		t = true;
+	}
+	return t;
+}
+
 Camera::Camera() {
 	position = Vector3(-1, 0, 0);
 	focus = Vector3();

@@ -1,0 +1,16 @@
+﻿  MainGameLoop.cpp
+C:\Users\Stefano\Documents\PoliTO\Informatica grafica\Progetto_2021\applicazione\FishingApp\FishingApp\MainGameLoop.cpp(142,48): warning C4267: '=': conversion from 'size_t' to 'uint', possible loss of data
+C:\Users\Stefano\Documents\PoliTO\Informatica grafica\Progetto_2021\applicazione\FishingApp\FishingApp\MainGameLoop.cpp(163,64): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+  GameObj.cpp
+  Mesh.cpp
+C:\Users\Stefano\Documents\PoliTO\Informatica grafica\Progetto_2021\applicazione\FishingApp\FishingApp\Mesh.cpp(16,18): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Stefano\Documents\PoliTO\Informatica grafica\Progetto_2021\applicazione\FishingApp\FishingApp\Mesh.cpp(17,16): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Stefano\Documents\PoliTO\Informatica grafica\Progetto_2021\applicazione\FishingApp\FishingApp\Mesh.cpp(18,18): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Stefano\Documents\PoliTO\Informatica grafica\Progetto_2021\applicazione\FishingApp\FishingApp\Mesh.cpp(80,20): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Stefano\Documents\PoliTO\Informatica grafica\Progetto_2021\applicazione\FishingApp\FishingApp\Mesh.cpp(81,22): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+  stb_image.cpp
+  Color.cpp
+  Timer.cpp
+  Vector.cpp
+  Generating Code...
+LINK : fatal error LNK1104: cannot open file 'glut32.lib'
