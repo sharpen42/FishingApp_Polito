@@ -63,8 +63,6 @@ public:
 };
 
 class Vector2 {
-private:
-	Vector3 v;
 public:
 	double x, y;
 
@@ -81,6 +79,7 @@ public:
 	double operator%(Vector2);     // cross product
 	Vector2 operator*(double);     // scale by a constant
 	Vector2 operator+=(Vector2);
+	Vector2 operator*=(double);     // scale by a constant
 
 	double magnitude();
 	Vector2 normalize();
@@ -90,8 +89,11 @@ public:
 	Vector2 add(Vector2 v);
 	Vector2 sub(Vector2 v);
 	Vector2 mult(double a);
+	Vector2 sum(Vector2 v);
 	Vector2 sum(double dx, double dy);
 	Vector2 scale(double sx, double sy);
+	Vector2 set(Vector2);
+	Vector2 set(double x, double y);
 	Vector3 asVector3();
 	double* toArray(double v[2]);
 

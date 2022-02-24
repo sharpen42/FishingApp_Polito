@@ -1,7 +1,7 @@
 #include "Vector.h"
 
 
-Vector2::Vector2() { x = 0.0; y = 0.0; v = Vector3(); }
+Vector2::Vector2() { x = 0.0; y = 0.0;}
 Vector2::Vector2(double x0, double y0) { x = x0; y = y0; }
 Vector2::Vector2(double a[2]) { x = a[0]; y = a[1]; }
 //Vector2::~Vector2() { delete a; }
@@ -14,6 +14,7 @@ double Vector2::operator*(Vector2 v) { return dot(v); }
 Vector2 Vector2::operator*(double a) { return mult(a); }
 double Vector2::operator%(Vector2 v) { return cross(v); }
 Vector2 Vector2::operator+=(Vector2 v) { sum(v.x, v.y); return *this; }
+Vector2 Vector2::operator*=(double v) { scale(v, v); return *this; }
 
 double Vector2::magnitude() { return sqrt(x * x + y * y); }
 Vector2 Vector2::normalize() { double m = magnitude(); return Vector2(x / m, y / m); }
@@ -23,14 +24,12 @@ double Vector2::cross(Vector2 v) { return x * v.y - y * v.x; }
 Vector2 Vector2::add(Vector2 v) { return Vector2(x + v.x, y + v.y); }
 Vector2 Vector2::sub(Vector2 v) { return Vector2(x - v.x, y - v.y); }
 Vector2 Vector2::mult(double a) { return Vector2(a * x, a * y); }
+Vector2 Vector2::sum(Vector2 v) { x += v.x; y += v.y; return *this; }
 Vector2 Vector2::sum(double dx, double dy) { x += dx; y += dy; return *this; }
 Vector2 Vector2::scale(double sx, double sy) { x *= sx; y *= sy; return *this; }
-Vector3 Vector2::asVector3() {
-	v.x = x;
-	v.y = y;
-	v.z = 0.0;
-	return v;
-}
+Vector2 Vector2::set(Vector2 v) { x = v.x; y = v.y; return *this; }
+Vector2 Vector2::set(double x0, double y0) { x = x0; y = y0; return *this; }
+Vector3 Vector2::asVector3() { return Vector3(x, y, 0.0); }
 
 double* Vector2::toArray(double a[2]){
 	a[0] = x;
@@ -62,7 +61,7 @@ Vector3 Vector3::operator*(Quaternion q) { return mult3(q.toMat3x3()); }
 Vector3 Vector3::operator%(Vector3 v) { return cross(v); }
 Vector3 Vector3::operator+=(Vector3 v) { sum(v.x, v.y, v.z); return *this; }
 Vector3 Vector3::operator-=(Vector3 v) { sum(-v.x, -v.y, -v.z); return *this; }
-Vector3 Vector3::operator*=(float f) { x *= f; y *= f; z *= f; return *this; }
+Vector3 Vector3::operator*=(float f) { scale(f, f, f); return *this; }
 
 double Vector3::magnitude() { return sqrt(x * x + y * y + z * z); }
 Vector3 Vector3::normalize() { double m = magnitude(); if (m != 1.0 && m != 0.0) return Vector3(x / m, y / m, z / m); else return *this; }

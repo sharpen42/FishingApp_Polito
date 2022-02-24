@@ -75,6 +75,7 @@ public:
 	int getHeight();
 	int getWidth();
 	const char* getPath();
+	int getId();
 
 	static bool init();
 };

@@ -4,9 +4,7 @@
 
 static int timer_n = 0;
 
-void defaultEnd(int n) {
-	return;
-}
+void defaultEnd(int n) { return; }
 
 Timer::Timer()
 {
@@ -27,8 +25,19 @@ Timer::Timer(double match0){
 
 bool Timer::start()
 {
-	if (status == timer_state::timer_inactive || status == timer_state::timer_ended) {
+	if (match > 0.0 && status == timer_state::timer_inactive || status == timer_state::timer_ended || status == timer_state::timer_stopped) {
 		status = timer_state::timer_counting;
+		count = 0.0;
+		return true;
+	}
+	return false;
+}
+
+bool Timer::start(float c)
+{
+	if (status == timer_state::timer_inactive || status == timer_state::timer_ended || status == timer_state::timer_stopped) {
+		status = timer_state::timer_counting;
+		match = c;
 		count = 0.0;
 		return true;
 	}
@@ -37,7 +46,7 @@ bool Timer::start()
 
 bool Timer::start(void(*atEnd0)(int))
 {
-	if (status == timer_state::timer_inactive || status == timer_state::timer_ended) {
+	if (status == timer_state::timer_inactive || status == timer_state::timer_ended || status == timer_state::timer_stopped) {
 		status = timer_state::timer_counting;
 		count = 0.0;
 		atEnd = atEnd0;
@@ -53,6 +62,7 @@ bool Timer::pass(float time)
 		if (count >= match) {
 			status = timer_state::timer_ended;
 			atEnd(id);
+			return false;
 		}
 		return true;
 	}
@@ -77,4 +87,5 @@ bool Timer::go()
 	return false;
 }
 
+bool Timer::isCounting() { return status == (timer_state::timer_counting); }
 unsigned int Timer::getId() { return id; }

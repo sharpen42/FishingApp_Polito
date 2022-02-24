@@ -17,9 +17,11 @@ public:
 	Timer();
 	Timer(double match);
 	bool start();
+	bool start(float c);
 	bool start(void(*atEnd)(int));
 	bool pass(float time);
 	bool stop();
 	bool go();
+	bool isCounting();
 	unsigned int getId();
 };

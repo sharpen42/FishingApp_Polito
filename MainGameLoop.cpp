@@ -14,11 +14,13 @@
 #define Rocchetto_OBJ "Rocchetto_3"
 #define Mano_OBJ "Mano_4"
 #define Pugno_OBJ "Pugno_5"
-#define Pesce0_OBJ "Trota_6"
-#define Pesce1_OBJ "Persico_7"
-#define Pesce2_OBJ "Carpa_8"
-#define Pesce3_OBJ "Luccio_9"
-#define Lago_OBJ "Laghetto_11"
+#define Pesce0_OBJ "TrotaA_6"
+#define Pesce1_OBJ "PersicoA_9"
+#define Pesce2_OBJ "CarpaA_12"
+#define Pesce3_OBJ "LuccioA_14"
+#define Lago_OBJ "Laghetto_16"
+#define MAX_Pesci 9
+#define deg2rad(x) ((x) * 2 * PI / 360.0)
 
 #define face_n(x) (((x) - ((x) % 3)) / 3)
 
@@ -26,21 +28,34 @@ typedef uint32_t uint;
 
 int XRES = 800;
 int YRES = 600;
-double xBound = 1.3;
+double xBound = 1.4;
 double yBound = 2.3;
 bool left_button = false;
+bool reorder = false;
 
 map<string, GameObj> allGameObj;
-map<int, Timer> allTimers;
+map<string, Timer> allTimers;
 
 Camera MainCamera;
 
 ColorRGBA LightAmbient;
 ColorRGBA LightDiffuse;
+ColorRGBA LightSpecular;
 Vector3 LightPosition;
+
+const std::string pesci[MAX_Pesci] = {
+        "TrotaA_6", "TrotaB_7", "TrotaC_8",
+        "PersicoA_9", "PersicoB_10", "PersicoC_11",
+        "CarpaA_12", "CarpaB_13",
+        "LuccioA_14"
+};
 
 enum class read_state : unsigned int {
     read_start, read_new, read_vertices, read_uvs, read_normals, read_faces, read_lines
+};
+
+enum class pesce_state : unsigned int {
+    pesce_null, pesce_inactive, pesce_active, pesce_interest, pesce_hooked, pesce_scared
 };
 
 bool stringMatch(string s, const char* match) {
@@ -54,7 +69,7 @@ bool init(string path) {
     vector<Vector2> allUVs, temp_uv;
     vector<int> temp_face, temp_line;
     filebuf fb1, fb2;
-    string newLine, name, mat;
+    string newLine, name, mat, tex_path;
     bool first = true, has_Texture = false;
     float x, y, z;
     ColorRGBA a, d, s, e;
@@ -89,7 +104,7 @@ bool init(string path) {
             std::cout << "LOG: new material '" << name << "'.\n";
             a = ColorRGBA::White();
             d = ColorRGBA::Grey(0.8);
-            s = ColorRGBA::Grey(0.5);
+            s = ColorRGBA::Grey(0.1);
             e = ColorRGBA::Black();
             has_Texture = false;
         } else if (stringMatch(newLine, "Ka ")) {
@@ -111,8 +126,11 @@ bool init(string path) {
             s.setAlpha(x);
             e.setAlpha(x);
         } else if (stringMatch(newLine, "map_Kd ")) {
-            tex = Texture(".\\models\\" + newLine.substr(7, newLine.length() - 7));
-            std::cout << "LOG: new texture '" << tex.getPath() << "' found.\n";
+            has_Texture = true;
+            tex_path = "models\\" + newLine.substr(7, newLine.length() - 7);
+            tex = Texture(tex_path);
+            if(!tex.isEmpty()) 
+                std::cout << "LOG: new texture '(" << tex.getId() << ") " << tex.getPath() << "' found.\n";
         }
     } while (!mtlfile.eof());
     allMats[name] = Material(d, s, a, e);
@@ -218,21 +236,6 @@ bool init(string path) {
     return true;
 }
 
-void prepareScene() {
-    allGameObj[Pugno_OBJ].hide();
-    //allGameObj[Pesce0_OBJ].hide();
-    //allGameObj[Pesce1_OBJ].hide();
-    //allGameObj[Pesce2_OBJ].hide();
-    //allGameObj[Pesce3_OBJ].hide();
-
-    LightAmbient = ColorRGBA(127, 127, 127, 255);
-    LightDiffuse = ColorRGBA(255, 255, 255, 255);
-    LightPosition = Vector3(0.0f, 0.0f, 15.0f);
-
-    MainCamera.lookAt(Vector3(-5.0, 0.0, 3.0), Vector3(0.0, 0.0, 0.0), Vector3(0.866, 0.0, 0.5));
-    MainCamera.setPersp(1.0, XRES, YRES, 1000.0);
-}
-
 void prepareOpenGL() {
     float ambient[4], diffuse[4], position[4];
     string texturePath;
@@ -242,7 +245,7 @@ void prepareOpenGL() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Enables blending and alpha value
     glEnable(GL_TEXTURE_2D);
     glShadeModel(GL_SMOOTH);		 // Enables Smooth Shading
-    glClearColor(0.1f, 0.8f, 0.6f, 1.0f);
+    glClearColor(0.3f, 0.6f, 0.8f, 1.0f);
     glClearDepth(1.0f);				// Depth Buffer Setup
     glEnable(GL_DEPTH_TEST);		// Enables Depth Testing
     glDepthFunc(GL_LEQUAL);			// The Type Of Depth Test To Do
@@ -254,20 +257,160 @@ void prepareOpenGL() {
 
     glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient.toFloat4(ambient));
     glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse.toFloat4(diffuse));
+    glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular.toFloat4(diffuse));
     glLightfv(GL_LIGHT1, GL_POSITION, LightPosition.toArray4f(position));
     glEnable(GL_LIGHT1);
     glColorMaterial(GL_FRONT, GL_DIFFUSE);
+}
+
+void prepareScene() {
+    const double SCALE = 1.0;
+    allGameObj[Pugno_OBJ].hide();
+    for (int i = 0; i < 9; i++) {
+        allGameObj[pesci[i]].hide();
+        allGameObj[pesci[i]].setState((int) pesce_state::pesce_inactive);
+        allTimers[pesci[i]] = Timer();
+    }
+
+    allGameObj[Amo_OBJ].setBoundingBox2D(SCALE * 0.1, SCALE * 0.05);
+    for (uint i = 0; i < 3; i++) {
+        allGameObj[pesci[i]].setBoundingBox2D(SCALE * 0.25, SCALE * 0.5);
+    }
+    for (uint i = 3; i < 6; i++) {
+        allGameObj[pesci[i]].setBoundingBox2D(SCALE * 0.2, SCALE * 0.3);
+    }
+    for (uint i = 6; i < 8; i++) {
+        allGameObj[pesci[i]].setBoundingBox2D(SCALE * 0.25, SCALE * 0.7);
+    }
+    allGameObj[pesci[8]].setBoundingBox2D(SCALE * 0.25, SCALE * 1.3);
+    //allGameObj[Lago_OBJ].setBoundingBox2D(0.8 * xBound, 0.8 * yBound);
+    //allGameObj[Lago_OBJ].boundingBox.setOutside();
+
+    LightAmbient = ColorRGBA(20, 20, 20, 255);
+    LightDiffuse = ColorRGBA(127, 127, 127, 255);
+    LightSpecular = ColorRGBA(0, 0, 0, 220);
+    LightPosition = Vector3(0.0f, 0.0f, 5.0f);
+
+    allTimers["spawnFish"] = Timer(5.0);
+    allTimers["spawnFish"].start();
+
+    MainCamera.lookAt(Vector3(-5.0, 0.0, 4.0), Vector3(0.0, 0.0, 0.0), Vector3(0.5, 0.0, 0.5));
+    MainCamera.setPersp(1.0, XRES, YRES, 1000.0);
+}
+
+void updateScene(double deltaTime) {
+    static uint pesci_ord[MAX_Pesci] = { 0, 3, 6, 1, 8, 4, 2, 7, 5 };
+    static bool is_spawned[MAX_Pesci] = { false, false, false, false, false, false, false, false, false };
+    static Vector3 floater = Vector3();
+    static uint n_pesci = 0;
+    static uint pesci_attivi = 0;
+    static double theta;
+    static const double posizioni[10][2] = {
+        {-4/5 * xBound, 0.7 * yBound}, {-1/5 * xBound, 0.7 * yBound}, {0, 0.7 * yBound}, {1/5 * xBound, 0.7 * yBound}, {4/5 * xBound, 0.7 * yBound},
+        {-4/5 * xBound,-0.7 * yBound}, {-1/5 * xBound,-0.7 * yBound}, {0,-0.7 * yBound}, {1/5 * xBound,-0.7 * yBound}, {4/5 * xBound,-0.7 * yBound}
+    };
+    double dist = allGameObj[Canna_OBJ].transform.position.distance(allGameObj[Amo_OBJ].transform.position);
+
+    theta += deltaTime;
+    floater.set(0, 0, sin(2 * PI * theta));
+    if (dist > 0.4) {
+        allGameObj[Amo_OBJ].setVelocity(floater + (allGameObj[Canna_OBJ].transform.position - allGameObj[Amo_OBJ].transform.position) * 0.4);
+    } else if (dist < 0.05) {
+        allGameObj[Amo_OBJ].setVelocity(floater + (allGameObj[Canna_OBJ].transform.position - allGameObj[Amo_OBJ].transform.position) * 0.01);
+    } else allGameObj[Amo_OBJ].setVelocity(floater);
+    allGameObj[Amo_OBJ].checkCollision(xBound, yBound, 0.0);
+    for (uint i = 0; i < MAX_Pesci; i++) {
+        uint j = pesci_ord[i];
+        pesce_state state = (pesce_state) allGameObj[pesci[j]].getState();
+        switch (state) {
+        case pesce_state::pesce_active:
+            if (allGameObj[Amo_OBJ].transform.velocity.xy().magnitude() < 0.1) {
+                if (allGameObj[pesci[j]].boundingBox.collide(allGameObj[Amo_OBJ].boundingBox.position)) {
+                    std::cout << "LOG: Collision(1_point): (" << Amo_OBJ << ", " << pesci[j] << ")\n";
+                    //allGameObj[pesci[j]].hide();
+                    allGameObj[pesci[j]].setState((int)pesce_state::pesce_interest);
+                    allGameObj[pesci[j]].rotate(-60, 0, 0);
+                    allGameObj[pesci[j]].setVelocity(Vector3::Polar(1, deg2rad(allGameObj[pesci[j]].transform.rotation.z), deg2rad(allGameObj[pesci[j]].transform.rotation.y)));
+                    if (allTimers[pesci[j]].isCounting()) allTimers[pesci[j]].stop();
+                    allTimers[pesci[j]].start(3.0);
+                    pesci_attivi--;
+                }
+            }
+            //if(allGameObj[Amo_OBJ].checkCollision(allGameObj[pesci[i]])) std::cout << "LOG: Collision(2_box): (" << Amo_OBJ << ", " << pesci[i] << ")\n";
+            if (allGameObj[pesci[j]].checkCollision(xBound - allGameObj[pesci[j]].boundingBox.dimensions.x, yBound - allGameObj[pesci[j]].boundingBox.dimensions.y, 0.0)) {
+                double speed = 0.1;
+                if (j == 0 && j < 3) speed = 0.3;
+                else if (j >= 3 && j < 6) speed = 0.5;
+                else if (j >= 6 && j < 8) speed = 0.2;
+                else if (j == 8) speed = 0.1;
+                allGameObj[pesci[j]].rotate(0, 0, 90 + rand() % 60);
+                allGameObj[pesci[j]].setVelocity(Vector3::Polar(speed, deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0));
+            }
+            break;
+        case pesce_state::pesce_interest:
+            if (allGameObj[Amo_OBJ].transform.velocity.xy().magnitude() > 0.0) {
+                allGameObj[pesci[j]].setState((int)pesce_state::pesce_scared);
+                allGameObj[pesci[j]].rotate(60, 0, 0);
+                allGameObj[pesci[j]].setVelocity(Vector3::Polar(1.2, deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0));
+                if (allTimers[pesci[j]].isCounting()) allTimers[pesci[j]].stop();
+                allTimers[pesci[j]].start(4.0);
+            } else {
+                if (allTimers[pesci[j]].isCounting()) {
+                    allGameObj[pesci[j]].setVelocity(allGameObj[pesci[j]].transform.velocity * sin(theta));
+                } else {
+                    //game_state = skill_check;
+                    //if(skillCheck()) {
+                    allGameObj[pesci[j]].setState((int)pesce_state::pesce_hooked);
+                    allGameObj[pesci[j]].rotate(-30, 0, 0);
+                    allGameObj[Amo_OBJ].translate(0, 0, 1.0);
+                }
+            }
+            break;
+        case pesce_state::pesce_hooked:
+            allGameObj[pesci[j]].place(allGameObj[Amo_OBJ].transform.position);
+            if (allGameObj[Amo_OBJ].transform.position.xy().magnitude() <= 0.1) {
+                allGameObj[pesci[j]].setState((int) pesce_state::pesce_inactive);
+                allGameObj[pesci[j]].hide();
+                allGameObj[Amo_OBJ].translate(0, 0, -1.0);
+                // aggiorna punteggio
+            }
+            break;
+        case pesce_state::pesce_scared:
+            if (allTimers[pesci[i]].isCounting()) {
+                if (allGameObj[pesci[j]].checkCollision(xBound - allGameObj[pesci[j]].boundingBox.dimensions.x, yBound - allGameObj[pesci[j]].boundingBox.dimensions.y, 0.0)) {
+                    allGameObj[pesci[j]].rotate(0, 0, 90 + rand() % 60);
+                    allGameObj[pesci[j]].setVelocity(Vector3::Polar(1.2, deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0));
+                }
+            } else allGameObj[pesci[j]].setState((int) pesce_state::pesce_active);
+            break;
+        case pesce_state::pesce_inactive: default: break;
+        }
+    }
+    if (!allTimers["spawnFish"].isCounting()){
+        if (pesci_attivi < 6) {
+            int i = pesci_ord[n_pesci % MAX_Pesci];
+            int p = n_pesci % 10;
+            allGameObj[pesci[i]].place(posizioni[p][0], posizioni[p][1], 0);
+            allGameObj[pesci[i]].rotate(0, 0, rand() % 180);
+            allGameObj[pesci[i]].setVelocity(Vector3::Polar(0.4, deg2rad(allGameObj[pesci[i]].transform.rotation.z), 0));
+            allGameObj[pesci[i]].setState((int) pesce_state::pesce_active);
+            allGameObj[pesci[i]].show();
+            n_pesci++;
+            pesci_attivi++;
+            std::cout << "LOG: Spawned fish in (" << posizioni[p][0] << ", " << posizioni[p][1] << ") [" << n_pesci << "].\n";
+        }
+        allTimers["spawnFish"].start();
+    }
 }
 
 void doMotion() {
     static Vector3 left = Vector3(0, -1, 0);
     static int prev_time = 0;
     const float middle = 0.3;
-    double dist = 0.0;
-    float deltaTime;
+    double deltaTime;
     int time = glutGet(GLUT_ELAPSED_TIME);
 
-    deltaTime = (time - prev_time) * 0.001; // in seconds
+    deltaTime = ((double)time - (double)prev_time) * 0.001; // in seconds
     prev_time = time;
 
     MainCamera.lookAt(MainCamera.position, 
@@ -275,31 +418,34 @@ void doMotion() {
                       MainCamera.forward % left);
 
     allGameObj[Amo_OBJ].move(deltaTime);
-    allGameObj[Amo_OBJ].checkCollision(xBound, yBound, 0.0);
-    dist = allGameObj[Canna_OBJ].transform.position.distance(allGameObj[Amo_OBJ].transform.position);
-    if (dist > 0.4) {
-        allGameObj[Amo_OBJ].setVelocity((allGameObj[Canna_OBJ].transform.position - allGameObj[Amo_OBJ].transform.position) * 0.4);
-    }  else if (dist < 0.1) {
-        allGameObj[Amo_OBJ].setVelocity((allGameObj[Canna_OBJ].transform.position - allGameObj[Amo_OBJ].transform.position) * 0.01);
+    for (int i = 0; i < MAX_Pesci; i++) {
+        pesce_state ps = (pesce_state) allGameObj[pesci[i]].getState();
+        switch (ps){
+        case pesce_state::pesce_active: case pesce_state::pesce_interest: case pesce_state::pesce_scared:
+            allGameObj[pesci[i]].move(deltaTime);
+            allTimers[pesci[i]].pass(deltaTime);
+        }
     }
-    
 
-    /*
-    for (Timer t : allTimers) {
-        t.pass(deltaTime);
-    }*/
+    allTimers["spawnFish"].pass(deltaTime);
 
+    updateScene(deltaTime);
     glutPostRedisplay();
 }
 
 void renderScene() {
     static bool once = true;
-    static string* orderedObjs = new string[allGameObj.size()];
+    static string* orderedObjs;
+    static Vector2 dim = Vector2();
     int id = -1;
 
+    if (reorder) once = true;
     if (once) {
         // ordina gli elementi in base al numero contenuto nel nome
         once = false; // l'ordinamento va fatto solo una volta, 
+        if(reorder) delete[] orderedObjs;
+        reorder = false;
+        orderedObjs = new string[allGameObj.size()];
         for (auto elem : allGameObj) {
             id = -1;
             for (uint i = 0; i < elem.first.length(); i++) {
@@ -330,8 +476,8 @@ void renderScene() {
         allGameObj[orderedObjs[i]].renderOpenGL();
     }
 
-    glutSwapBuffers();
     //doMotion();
+    glutSwapBuffers();
 }
 
 void processNormalKeys(unsigned char key, int x, int y) {
@@ -402,14 +548,13 @@ void drag_n_drop(int x, int y) {
     if (y > yres) y = yres - 1;
     if (x < 0) x = 1;
     if (y < 0) y = 1;
-    on_screen.set((0.5 - (float)y / (float)yres) * 2.4f, (0.5 - (float)x / (float)xres) * 3.6f, 0.0);
+    on_screen.set((0.5 - (float)y / (float)yres) * 2 * (xBound - 0.1), (0.5 - (float)x / (float)xres) * 2 * (yBound - 0.1), 0.0);
     if (left_button) {
         canna_xy.set(allGameObj[Canna_OBJ].transform.position.x, allGameObj[Canna_OBJ].transform.position.y, 0);
         delta = on_screen - canna_xy;
         allGameObj[Canna_OBJ].translate(delta);
         allGameObj[Rocchetto_OBJ].translate(delta);
         allGameObj[Pugno_OBJ].translate(delta);
-        MainCamera.focus = allGameObj[Canna_OBJ].transform.position * 0.4;
 
         //std::cout << "Amo.vel(" << allGameObj[Amo_OBJ].transform.velocity.x << ", " << allGameObj[Amo_OBJ].transform.velocity.y << ")\n";
     }

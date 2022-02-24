@@ -90,6 +90,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>DevIL\include</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -146,7 +147,6 @@
     <ClCompile Include="MainGameLoop.cpp" />
     <ClCompile Include="GameObj.cpp" />
     <ClCompile Include="Mesh.cpp" />
-    <ClCompile Include="stb_image.cpp" />
     <ClCompile Include="Color.cpp" />
     <ClCompile Include="Timer.cpp" />
     <ClCompile Include="Vector.cpp" />
@@ -154,7 +154,6 @@
   <ItemGroup>
     <ClInclude Include="GameObj.h" />
     <ClInclude Include="Timer.h" />
-    <ClInclude Include="stb_image.h" />
     <ClInclude Include="Vector.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Color.h" />

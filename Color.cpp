@@ -105,9 +105,7 @@ bool Texture::init() {
 	{
 		ILint test = ilGetInteger(IL_VERSION_NUM);
 		/// wrong DevIL version ///
-		std::string err_msg = "Wrong DevIL version. Old devil.dll in system32/SysWow64?";
-		char* cErr_msg = (char*)err_msg.c_str();
-
+		std::cout << "ERROR: Wrong DevIL version. Old devil.dll in system32/SysWow64?";
 		return false;
 	}
 
@@ -117,7 +115,7 @@ bool Texture::init() {
 }
 
 Texture::Texture() {
-	rendererID = 0;
+	rendererID = -1;
 	imageID = 0;
 	bpp = 0;
 	type = COLOR_TYPE::COLOR_UNDEFINED;
@@ -128,7 +126,7 @@ Texture::Texture() {
 Texture::Texture(std::string filename) {
 	ILboolean success = false;
 
-	rendererID = 0;
+	rendererID = -1;
 	imageID = 0;
 	bpp = 0;
 	type = COLOR_TYPE::COLOR_UNDEFINED;
@@ -139,11 +137,11 @@ Texture::Texture(std::string filename) {
 	imageID = ilGenImage(); // Generation of image name, save IL image ID
 	ilBindImage(imageID); // Binding of DevIL image name
 	success = ilLoadImage((const wchar_t*)filename.c_str());
-	std::cerr << "LOG: Loading Image: '" << filename.data() << "'.\n";
 	path.assign(filename);
 
 	if (success) // If no error occured:
 	{
+		std::cerr << "LOG: Loading Image: '" << filename.data() << "'.\n";
 		success = ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE); // Convert every colour component into unsigned byte. If your image contains alpha channel you can replace IL_RGB with IL_RGBA
 		if (!success)
 		{
@@ -162,12 +160,13 @@ Texture::Texture(std::string filename) {
 		default: break;
 		}
 
-
 		glGenTextures(1, &rendererID); // Texture name generation
 		glBindTexture(GL_TEXTURE_2D, rendererID); // Binding of texture name
 		//redefine standard texture values
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // We will use linear interpolation for magnification filter
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // We will use linear interpolation for minifying filter
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 		glTexImage2D(GL_TEXTURE_2D, 0, ilGetInteger(IL_IMAGE_BPP), 
 					 ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 0, 
 					 ilGetInteger(IL_IMAGE_FORMAT), GL_UNSIGNED_BYTE, 
@@ -185,15 +184,15 @@ Texture::Texture(std::string filename) {
 Texture::~Texture() {
 	//if (pixels) stbi_image_free(pixels);
 	//ilDeleteImage(imageID);
-	glDeleteTextures(1, &rendererID);
+	if(rendererID > -1) glDeleteTextures(1, &rendererID);
 }
 
 bool Texture::isEmpty() {
-	return (rendererID == 0);
+	return (rendererID == -1);
 }
 
 void Texture::Bind(/*unsigned int slot = 0*/) {
-	if (rendererID == 0) return;
+	if (rendererID == -1) return;
 	//glActiveTexture(GL_TEXTURE0 + slot); 
 	// a quanto pare non funziona se non si includono anche altre librerie, ma non è necessario; 
 	// serve nel caso si debbano usare più textures per lo stesso oggetto, ci sono degli slot dedicati, 
@@ -202,13 +201,14 @@ void Texture::Bind(/*unsigned int slot = 0*/) {
 }
 
 void Texture::UnBind() {
-	if (rendererID == 0) return;
+	if (rendererID == -1) return;
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 int Texture::getHeight() { return height; }
 int Texture::getWidth() { return width; }
 const char* Texture::getPath() { return path.c_str(); }
+int Texture::getId() { return rendererID; }
 
 bool Material::operator==(Material m) { return (ambient == m.ambient && diffuse == m.diffuse && specular == m.specular && emission == m.emission); }
 bool Material::operator!=(Material m) { return (ambient != m.ambient || diffuse != m.diffuse || specular != m.specular || emission == m.emission); }

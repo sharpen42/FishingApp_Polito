@@ -11,6 +11,13 @@
 #include "Mesh.h"
 #include "Color.h"
 
+#define STATE_NULL 0
+
+class Transform;
+class GameObj;
+class Camera;
+class BoundingBox2D;
+
 class Transform {
 public:
 	Vector3 position, velocity, acceleration, scale, rotation;
@@ -22,22 +29,47 @@ public:
 	void move(double dt);
 };
 
+class BoundingBox2D {
+private:
+	bool inside;
+public:
+	Vector2 position, dimensions;
+
+	BoundingBox2D();
+	BoundingBox2D(double dimx, double dimy);
+	BoundingBox2D(double dimx, double dimy, Vector2 position);
+
+	bool isEmpty();
+	bool collide(Vector2);
+	bool collide(BoundingBox2D);
+	double getX();
+	double getY();
+	void setOutside();
+	void setInside();
+};
+
 class GameObj {
 private:
 	std::string name;
 	bool render;
+	int status;
 public:
-	Texture texture;
 	Mesh mesh;
 	Curve curve;
 	Transform transform;
 	std::map<int, Material> materials;
+	BoundingBox2D boundingBox;
 
 	GameObj();
 	GameObj(std::string n);
+	int setState(int);
+	int getState();
 	string setName(std::string n);
 	Mesh addMesh(Mesh m); // returns previous mesh
 	Curve addCurve(Curve c); // returns previous curve
+	BoundingBox2D setBoundingBox2D();
+	BoundingBox2D setBoundingBox2D(double dx, double dy);
+	BoundingBox2D setBoundingBox2D(BoundingBox2D);
 	const char* getName();
 	void place(Vector3 p);
 	void place(float x, float y, float z);
@@ -53,9 +85,12 @@ public:
 	void move(float deltaTime);
 	void hide();
 	void show();
+	bool isHidden();
 	void renderOpenGL();
 	bool checkCollision(double bx, double by, double bz);
 	bool checkCollision(double xBound, double yBound, double zBound, Vector3 v);
+	bool checkCollision(GameObj);
+	bool checkCollision(BoundingBox2D);
 };
 
 class Camera {
