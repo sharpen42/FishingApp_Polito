@@ -1,7 +1,5 @@
 #include "Color.h"
 
-//#include "stb_image.h"
-
 bool IL_init = false;
 
 ColorRGBA::ColorRGBA(){
@@ -12,17 +10,17 @@ ColorRGBA::ColorRGBA(){
 }
 
 ColorRGBA::ColorRGBA(float r0, float g0, float b0, float a0) {
-	r = (r0 >= 1.0) ? 255 : (uint8_t)floor(r0 * 255.0);
-	g = (g0 >= 1.0) ? 255 : (uint8_t)floor(g0 * 255.0);
-	b = (b0 >= 1.0) ? 255 : (uint8_t)floor(b0 * 255.0);
-	a = (a0 >= 1.0) ? 255 : (uint8_t)floor(a0 * 255.0);
+	r = (r0 >= 1.0) ? 255 : (int)floor(r0 * 255.0);
+	g = (g0 >= 1.0) ? 255 : (int)floor(g0 * 255.0);
+	b = (b0 >= 1.0) ? 255 : (int)floor(b0 * 255.0);
+	a = (a0 >= 1.0) ? 255 : (int)floor(a0 * 255.0);
 }
 
 ColorRGBA::ColorRGBA(int r0, int g0, int b0, int a0) {
-	r = (r0 >= 255) ? 255 : (uint8_t)r0;
-	g = (g0 >= 255) ? 255 : (uint8_t)g0;
-	b = (b0 >= 255) ? 255 : (uint8_t)b0;
-	a = (a0 >= 255) ? 255 : (uint8_t)a0;
+	r = (r0 < 0) ? 0 : (int)r0;
+	g = (g0 < 0) ? 0 : (int)g0;
+	b = (b0 < 0) ? 0 : (int)b0;
+	a = (a0 < 0) ? 0 : (int)a0;
 }
 
 bool ColorRGBA::operator==(ColorRGBA c) { return (r == c.r && g == c.g && b == c.b && a == c.a); }
@@ -31,31 +29,31 @@ bool ColorRGBA::operator!=(ColorRGBA c) { return (r != c.r || g != c.g || b != c
 ColorRGBA ColorRGBA::operator*(float f) {
 	if (f < 0) f = -f;
 	if (f > 1) f -= floor(f);
-	return ColorRGBA((uint8_t)floor(r * f), (uint8_t)floor(g * f), (uint8_t)floor(b * f), (uint8_t)floor(a * f));
+	return ColorRGBA((int)floor(r * f), (int)floor(g * f), (int)floor(b * f), (int)floor(a * f));
 }
 
 ColorRGBA ColorRGBA::operator*=(float f) {
 	if (f < 0) f = -f;
 	if (f > 1) f -= floor(f);
-	r = (uint8_t)floor(r * f);
-	g = (uint8_t)floor(g * f); 
-	b = (uint8_t)floor(b * f); 
-	a = (uint8_t)floor(a * f);
+	r = (int)floor(r * f);
+	g = (int)floor(g * f);
+	b = (int)floor(b * f);
+	a = (int)floor(a * f);
 	return *this;
 }
 
 void ColorRGBA::set(float r0, float g0, float b0, float a0) {
-	r = (uint8_t)floor(r0 * 255.0);
-	g = (uint8_t)floor(g0 * 255.0);
-	b = (uint8_t)floor(b0 * 255.0);
-	a = (uint8_t)floor(a0 * 255.0);
+	r = (int)floor(r0 * 255.0);
+	g = (int)floor(g0 * 255.0);
+	b = (int)floor(b0 * 255.0);
+	a = (int)floor(a0 * 255.0);
 }
 
 void ColorRGBA::set(int r0, int g0, int b0, int a0){
-	r = (uint8_t)r0;
-	g = (uint8_t)g0;
-	b = (uint8_t)b0;
-	a = (uint8_t)a0;
+	r = (r0 < 0) ? 0 : r0;
+	g = (g0 < 0) ? 0 : g0;
+	b = (b0 < 0) ? 0 : b0;
+	a = (a0 < 0) ? 0 : b0;
 }
 
 float* ColorRGBA::toFloat4(float c[4]) {
@@ -67,10 +65,10 @@ float* ColorRGBA::toFloat4(float c[4]) {
 }
 
 int* ColorRGBA::toInt4(int c[4]) {
-	c[0] = getRedi();
-	c[1] = getGreeni();
-	c[2] = getBluei();
-	c[3] = getAlphai();
+	c[0] = (int) r;
+	c[1] = (int) g;
+	c[2] = (int) b;
+	c[3] = (int) a;
 	return c;
 }
 
@@ -82,7 +80,9 @@ int ColorRGBA::getRedi() { return (int)r; }
 int ColorRGBA::getBluei() { return (int)g; }
 int ColorRGBA::getGreeni() { return (int)b; }
 int ColorRGBA::getAlphai() { return (int)a; }
-void ColorRGBA::setAlpha(float a0) { a = (uint8_t)floor(a0 * 255.0); }
+void ColorRGBA::setAlpha(float a0) { a = (uint32_t)floor(a0 * 255.0); }
+void ColorRGBA::Bind() { glColor4i(r, g, b, a); }
+void ColorRGBA::UnBind() { glColor4f(1.0, 1.0, 1.0, 1.0); }
 
 ColorRGBA ColorRGBA::White() {	return ColorRGBA(255, 255, 255, 255); }
 ColorRGBA ColorRGBA::Black() {	return ColorRGBA(0, 0, 0, 255); }
@@ -110,7 +110,11 @@ bool Texture::init() {
 	}
 
 	ilInit(); // Initialization of DevIL
-	IL_init = true;
+	ILenum devilError = ilGetError();
+	if (devilError != IL_NO_ERROR)
+		std::cout << "Devil Error: " << (unsigned char*)iluErrorString(devilError) << "\n";
+	IL_init = true; 
+	ilutRenderer(ILUT_OPENGL);
 	return true;
 }
 
@@ -120,11 +124,39 @@ Texture::Texture() {
 	bpp = 0;
 	type = COLOR_TYPE::COLOR_UNDEFINED;
 	height = width = 0;
+	pixels = nullptr;
 }
 
+/*
+Texture::Texture(std::string filename) {
+	rendererID = -1;
+	imageID = 0;
+	bpp = 0;
+	type = COLOR_TYPE::COLOR_RGBA;
+	height = width = 0;
+	pixels = nullptr;
+	path.assign(filename);
+
+	stbi_set_flip_vertically_on_load(0);
+	pixels = stbi_load(filename.c_str(), &width, &height, &bpp, 4);
+	if(pixels == nullptr) std::cout << "ERROR: couldn't load image " << filename << ".\n";
+	glGenTextures(1, &rendererID); // Texture name generation
+	glBindTexture(GL_TEXTURE_2D, rendererID); // Binding of texture name
+	//redefine standard texture values
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // We will use linear interpolation for magnification filter
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // We will use linear interpolation for minifying filter
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	if (pixels) stbi_image_free(pixels);
+}
+*/
 
 Texture::Texture(std::string filename) {
 	ILboolean success = false;
+	ILenum devilError;
 
 	rendererID = -1;
 	imageID = 0;
@@ -133,20 +165,35 @@ Texture::Texture(std::string filename) {
 	height = width = 0;
 	path = "";
 
-	if (!IL_init && !init()) return;
-	imageID = ilGenImage(); // Generation of image name, save IL image ID
+	if (!IL_init) { init(); }
+	imageID = ilGenImage(); // Image name generation
+	devilError = ilGetError();
+	if (devilError != IL_NO_ERROR)
+		std::cout << "Devil Error: post gen image - " << devilError << "\n";
+	IL_init = true;
 	ilBindImage(imageID); // Binding of DevIL image name
-	success = ilLoadImage((const wchar_t*)filename.c_str());
-	path.assign(filename);
+	devilError = ilGetError();
+	if (devilError != IL_NO_ERROR)
+		std::cout << "Devil Error: post bind image - " << devilError << "\n";
+	IL_init = true;
+	path += filename;
+	success = ilLoadImage((const wchar_t*) path.c_str());
+	devilError = ilGetError();
+	if (devilError != IL_NO_ERROR)
+		std::cout << "Devil Error: post load image - " << devilError << "\n";
 
 	if (success) // If no error occured:
 	{
-		std::cerr << "LOG: Loading Image: '" << filename.data() << "'.\n";
-		success = ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE); // Convert every colour component into unsigned byte. If your image contains alpha channel you can replace IL_RGB with IL_RGBA
+		std::cerr << "LOG: Loading Image: '" << path.data() << "'.\n";
+		success = ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE); // Convert every colour component into unsigned byte. If your image contains alpha channel you can replace IL_RGB with IL_RGBA
 		if (!success)
 		{
 			// Error occured
 			std::cerr << "ERROR: Couldn't convert image";
+			devilError = ilGetError();
+			if (devilError != IL_NO_ERROR)
+				std::cout << "Devil Error: " << (unsigned char*)iluErrorString(devilError) << "\n";
+			IL_init = true;
 			return;
 		}
 
@@ -167,19 +214,20 @@ Texture::Texture(std::string filename) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // We will use linear interpolation for minifying filter
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		glTexImage2D(GL_TEXTURE_2D, 0, ilGetInteger(IL_IMAGE_BPP), 
+		glTexImage2D(GL_TEXTURE_2D, 0, ilGetInteger(IL_IMAGE_BPP),
 					 ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 0, 
-					 ilGetInteger(IL_IMAGE_FORMAT), GL_UNSIGNED_BYTE, 
+					 ilGetInteger(IL_IMAGE_FORMAT), GL_UNSIGNED_BYTE,
 					 ilGetData());
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 	else
 	{
 		// Error occured 
-		std::cerr << "ERROR: Couldn't load Image: '" << filename.data() << "'\n";
+		std::cerr << "ERROR: Couldn't load Image: '" << path.data() << "'\n";
 	}
 	ilDeleteImage(imageID); // Because we have already copied image data into texture data we can release memory used by image.
 }
+
 
 Texture::~Texture() {
 	//if (pixels) stbi_image_free(pixels);
@@ -193,7 +241,7 @@ bool Texture::isEmpty() {
 
 void Texture::Bind(/*unsigned int slot = 0*/) {
 	if (rendererID == -1) return;
-	//glActiveTexture(GL_TEXTURE0 + slot); 
+	//glActiveTexture(GL_TEXTURE0); 
 	// a quanto pare non funziona se non si includono anche altre librerie, ma non è necessario; 
 	// serve nel caso si debbano usare più textures per lo stesso oggetto, ci sono degli slot dedicati, 
 	// ma possiamo ottenere lo stesso effetto in altri modi.
@@ -218,7 +266,6 @@ Material::Material() {
 	diffuse = ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f);
 	specular = ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f);
 	emission = ColorRGBA();
-	texture = Texture();
 	//shader = Shader();
 }
 
@@ -227,11 +274,4 @@ Material::Material(ColorRGBA d, ColorRGBA s, ColorRGBA a, ColorRGBA e) {
 	specular = s;
 	ambient = a;
 	emission = e;
-	texture = Texture();
-}
-
-Texture Material::addTexture(Texture t0) {
-	Texture t = texture;
-	texture = t0;
-	return t;
 }

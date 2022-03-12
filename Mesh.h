@@ -43,4 +43,5 @@ public:
 	int sizeSegments();
 	bool isEmpty();
 	double* pointsArray();
+	void follow(Vector3, Vector3);
 };

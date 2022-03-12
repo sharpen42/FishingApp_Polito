@@ -1,5 +1,5 @@
 # Blender MTL File: 'laghetto.blend'
-# Material Count: 18
+# Material Count: 19
 
 newmtl None
 Ns 500
@@ -59,8 +59,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd textures\\grass.png
-map_d textures\\grass.png
+map_Kd textures\\sfondo_texture.png
+map_d textures\\sfondo_texture.png
 
 newmtl mat_fontana
 Ns 225.000000
@@ -71,8 +71,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd textures\\funtain.png
-map_d textures\\funtain.png
+map_Kd textures\\sfondo_texture.png
+map_d textures\\sfondo_texture.png
 
 newmtl mat_laghetto
 Ns 225.000000
@@ -135,7 +135,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd textures\\plain_grass.png
+map_Kd textures\\sfondo_texture.png
 
 newmtl mat_rocchetto
 Ns 225.000000
@@ -156,18 +156,30 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd textures\\cherry_blossom_tree.png
-map_d textures\\cherry_blossom_tree.png
+map_Kd textures\\sfondo_texture.png
+map_d textures\\sfondo_texture.png
 
 newmtl mat_secchio
 Ns 225.000000
 Ka 1.000000 1.000000 1.000000
-Kd 0.112152 0.045790 0.018608
+Kd 0.037600 0.016824 0.007769
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+
+newmtl mat_splash
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
+map_Kd textures\\water_splash.png
+map_d textures\\water_splash.png
 
 newmtl mat_trota
 Ns 225.000000
@@ -183,7 +195,7 @@ map_Kd textures\\Trota_6_texture.png
 newmtl mat_vasca
 Ns 225.000000
 Ka 1.000000 1.000000 1.000000
-Kd 0.110790 0.163733 0.216519
+Kd 0.020113 0.028086 0.035831
 Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000

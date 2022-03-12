@@ -59,6 +59,7 @@ public:
 	Transform transform;
 	std::map<int, Material> materials;
 	BoundingBox2D boundingBox;
+	Texture texture;
 
 	GameObj();
 	GameObj(std::string n);
@@ -67,6 +68,7 @@ public:
 	string setName(std::string n);
 	Mesh addMesh(Mesh m); // returns previous mesh
 	Curve addCurve(Curve c); // returns previous curve
+	Texture addTexture(Texture t);
 	BoundingBox2D setBoundingBox2D();
 	BoundingBox2D setBoundingBox2D(double dx, double dy);
 	BoundingBox2D setBoundingBox2D(BoundingBox2D);
@@ -79,7 +81,9 @@ public:
 	void rotate(float x, float y, float z);
 	void scale(Vector3 s);
 	void scale(float x, float y, float z);
+	void reScale();
 	void setVelocity(Vector3 v);
+	void setAcceleration(Vector3 v);
 	void applyForce(Vector3 f);
 	void applyForce(double fx, double fy, double fz);
 	void move(float deltaTime);
@@ -106,14 +110,10 @@ public:
 	void translate(Vector3 t);
 	void translate(float x, float y, float z);
 	void lookAt(Vector3 position, Vector3 focus, Vector3 up);
-	void setPersp(float near, float w, float h, float far);
 	bool hasMoved();
 };
 
 Mat4x4 translation(double dx, double dy, double dz);
 Mat4x4 rotation(double ax, double ay, double az);
 Mat4x4 scale(double sx, double sy, double sz);
-Vector3 i();
-Vector3 j();
-Vector3 k();
 

@@ -5,6 +5,9 @@
 
 #include <GL/glut.h>
 #include <IL/il.h>
+#include <IL/ilu.h>
+#include <IL/ilut.h>
+//#include "stb_image.h"
 
 enum class COLOR_TYPE {
 	COLOR_UNDEFINED, COLOR_BW, COLOR_BWA, COLOR_RGB, COLOR_RGBA
@@ -12,7 +15,7 @@ enum class COLOR_TYPE {
 
 class ColorRGBA {
 private:
-	uint8_t r, g, b, a;
+	uint32_t r, g, b, a;
 
 public:
 	ColorRGBA();
@@ -38,6 +41,8 @@ public:
 	int getGreeni();
 	int getAlphai();
 	void setAlpha(float a);
+	void Bind();
+	void UnBind();
 	
 	static ColorRGBA White();
 	static ColorRGBA Black();
@@ -64,6 +69,7 @@ private:
 	int height, width, bpp; // bpp: bits per pixels
 	unsigned int rendererID, imageID;
 	std::string path;
+	unsigned char* pixels;
 public:
 
 	Texture();
@@ -83,7 +89,7 @@ public:
 class Material {
 public:
 	ColorRGBA diffuse, specular, ambient, emission;
-	Texture texture;
+	//Texture texture;
 	//Shader shader;
 
 	bool operator==(Material);
@@ -91,5 +97,4 @@ public:
 
 	Material();
 	Material(ColorRGBA diffuse, ColorRGBA specular, ColorRGBA ambient, ColorRGBA emission);
-	Texture addTexture(Texture);
 };

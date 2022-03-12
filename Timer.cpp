@@ -87,5 +87,5 @@ bool Timer::go()
 	return false;
 }
 
-bool Timer::isCounting() { return status == (timer_state::timer_counting); }
+bool Timer::isCounting() { return (status == timer_state::timer_counting); }
 unsigned int Timer::getId() { return id; }

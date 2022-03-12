@@ -1,0 +1,373 @@
+#include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <cstdlib>
+
+#include <GL/glut.h>
+//#include <irrKlang.h>
+
+#include "GameObj.h"
+#include "Timer.h"
+
+#define MAX_Pesci 9
+#define SEC_Duration 60
+
+#define deg2rad(x) ((x) * (2 * PI) / 360.0)
+#define rad2deg(x) ((x) * 360.0 / (2 * PI))
+#define face_n(x) (((x) - ((x) % 3)) / 3)
+
+#define Canna_OBJ "Canna_0"
+#define Amo_OBJ "Amo_1"
+#define Filo_OBJ "Filo_2"
+#define Rocchetto_OBJ "Rocchetto_3"
+#define Mano_OBJ "Mano_4"
+#define Pugno_OBJ "Pugno_5"
+#define Lago_OBJ "Laghetto_17"
+
+enum class GameState : unsigned int {
+    GameState_TitleScreen, GameState_Play, GameState_SkillCheck, GameState_Pause, GameState_End
+};
+
+enum class read_state : unsigned int {
+    read_start, read_new, read_vertices, read_uvs, read_normals, read_faces, read_lines
+};
+
+enum class pesce_state : unsigned int {
+    pesce_null, pesce_inactive, pesce_active, pesce_interest, pesce_hooked, pesce_scared
+};
+
+typedef uint32_t uint;
+
+int XRES = 800;
+int YRES = 600;
+double xBound = 1.4;
+double yBound = 2.3;
+bool left_button = false;
+bool skill_check_successful = false;
+bool skill_check_failed = false;
+
+map<string, GameObj> allGameObj;
+map<string, Timer> allTimers;
+
+Camera MainCamera;
+
+ColorRGBA LightAmbient;
+ColorRGBA LightDiffuse;
+ColorRGBA LightSpecular;
+Vector3 LightPosition;
+
+//irrklang::ISoundEngine* soundEngine;
+
+void* font = GLUT_BITMAP_TIMES_ROMAN_24;
+bool check_sequence_generation = false;
+std::string skill_check_sequence;
+int sequence_length = 4;
+double skill_check_timer_count = 5000;
+
+GameState game_state = GameState::GameState_TitleScreen;
+int game_score = 0;
+
+const std::string pesci[MAX_Pesci] = {
+        "TrotaA_6", "TrotaB_7", "TrotaC_8",
+        "PersicoA_9", "PersicoB_10", "PersicoC_11",
+        "CarpaA_12", "CarpaB_13",
+        "LuccioA_14"
+};
+
+bool stringMatch(string s, const char* match) {
+    return (s.find(match, 0, strlen(match)) == 0);
+}
+
+bool init(string path) {
+    ColorRGBA nullColor = ColorRGBA(0, 0, 0, 0);
+    map<string, Material> allMats;
+    vector<Vector3> allVertices, allNormals, temp_vert, temp_norm;
+    vector<Vector2> allUVs, temp_uv;
+    vector<int> temp_face, temp_line;
+    filebuf fb1, fb2;
+    string newLine, name, mat, tex_path;
+    bool first = true, has_Texture = false;
+    float x, y, z;
+    ColorRGBA a, d, s, e;
+    Texture tex;
+    uint v1, v2, v3;
+    uint n1, n2, n3;
+    uint uv1, uv2, uv3;
+    uint start = 0;
+    read_state read_status = read_state::read_start;
+
+
+    if (path.find(".obj", path.length() - 4) == path.npos || !fb1.open(path, ios::in)) {
+        std::cout << "ERROR: file " << path << " not opened.\n";
+        return false;
+    }
+    path.erase(path.length() - 4);
+    path.append(".mtl");
+    if (!fb2.open(path, ios::in)) {
+        std::cout << "ERROR: file " << path << " not opened.\n";
+        return false;
+    }
+
+    istream objfile(&fb1), mtlfile(&fb2);
+    do {
+        getline(mtlfile, newLine);
+        if (stringMatch(newLine, "newmtl ")) {
+            if (!first) {
+                allMats[name] = Material(d, s, a, e);
+                if (has_Texture) allMats[name].addTexture(tex);
+            } else first = false;
+            name.assign(newLine.substr(7, newLine.length() - 7));
+            std::cout << "LOG: new material '" << name << "'.\n";
+            a = ColorRGBA::White();
+            d = ColorRGBA::Magenta();
+            s = ColorRGBA::Grey(0.1);
+            e = ColorRGBA::Black();
+            has_Texture = false;
+        } else if (stringMatch(newLine, "Ka ")) {
+            sscanf_s(newLine.c_str(), "Ka %f %f %f\n", &x, &z, &y);
+            a.set(x, y, z, 1.0);
+        } else if (stringMatch(newLine, "Kd ")) {
+            sscanf_s(newLine.c_str(), "Kd %f %f %f\n", &x, &z, &y);
+            d.set(x, y, z, 1.0);
+        } else if (stringMatch(newLine, "Ks ")) {
+            sscanf_s(newLine.c_str(), "Ks %f %f %f\n", &x, &z, &y);
+            s.set(x, y, z, 1.0);
+        } else if (stringMatch(newLine, "Ke ")) {
+            sscanf_s(newLine.c_str(), "Ke %f %f %f\n", &x, &z, &y);
+            e.set(x, y, z, 1.0);
+        } else if (stringMatch(newLine, "d ")) {
+            sscanf_s(newLine.c_str(), "d %f\n", &x);
+            a.setAlpha(1.0);
+            d.setAlpha(x);
+            s.setAlpha(1.0);
+            e.setAlpha(0.0);
+        } else if (stringMatch(newLine, "map_Kd ")) {
+            has_Texture = true;
+            tex_path = newLine.substr(7, newLine.length() - 7);
+            tex_path.replace(tex_path.find("\\\\"), 2, "\\");
+            tex = Texture(".\\models\\" + tex_path);
+            if (!tex.isEmpty())
+                std::cout << "LOG: new texture '(" << tex.getId() << ") " << tex.getPath() << "' found.\n";
+        }
+    } while (!mtlfile.eof());
+    allMats[name] = Material(d, s, a, e);
+    if (has_Texture) allMats[name].addTexture(tex);
+    std::cout << "LOG: found all materials\n"; first = true;
+    do {
+        getline(objfile, newLine);
+        if (stringMatch(newLine, "o ")) {
+            if (read_status != read_state::read_new) {
+                if (!first) {
+                    if (read_status == read_state::read_faces) {
+                        allGameObj[name].addMesh(Mesh(temp_vert, temp_norm, temp_uv, temp_face));
+                    } else if (read_status == read_state::read_lines) {
+                        allGameObj[name].addCurve(Curve(temp_vert, temp_line));
+                    }
+                } else first = false;
+                read_status = read_state::read_new;
+            }
+            name.assign(newLine.substr(2, newLine.length() - 2));
+            std::cout << "LOG: new object '" << name << "'.\n";
+            allGameObj[name] = GameObj(name);
+        } else if (stringMatch(newLine, "v ")) {
+            if (read_status != read_state::read_vertices) {
+                read_status = read_state::read_vertices;
+                allGameObj[name].addMesh(Mesh());
+                if (allVertices.size() == 0) start = 1;
+                else start = allVertices.size();
+            }
+            sscanf_s(newLine.c_str(), "v %f %f %f\n", &x, &y, &z);
+            allVertices.push_back(Vector3(x, y, z));
+        } else if (stringMatch(newLine, "vt ")) {
+            if (read_status != read_state::read_uvs) read_status = read_state::read_uvs;
+            sscanf_s(newLine.c_str(), "vt %f %f\n", &x, &y);
+            allUVs.push_back(Vector2(x, y));
+        } else if (stringMatch(newLine, "vn ")) {
+            if (read_status != read_state::read_normals) read_status = read_state::read_normals;
+            sscanf_s(newLine.c_str(), "vn %f %f %f\n", &x, &y, &z);
+            allNormals.push_back(Vector3(x, y, z));
+        } else if (stringMatch(newLine, "f ")) {
+            if (read_status != read_state::read_faces) {
+                read_status = read_state::read_faces;
+                temp_vert.clear();
+                temp_norm.clear();
+                temp_uv.clear();
+                temp_face.clear();
+            }
+            sscanf_s(newLine.c_str(), "f %u/%u/%u %u/%u/%u %u/%u/%u\n", &v1, &uv1, &n1, &v2, &uv2, &n2, &v3, &uv3, &n3);
+            allGameObj[name].materials[face_n(temp_face.size())] = allMats[mat];
+            temp_face.push_back(v1 - start);
+            if (temp_vert.size() <= v1 - start)
+                temp_vert.resize(v1 - start + 1);
+            temp_vert[v1 - start] = allVertices[v1 - 1];
+            if (temp_norm.size() <= v1 - start)
+                temp_norm.resize(v1 - start + 1);
+            temp_norm[v1 - start] = allNormals[n1 - 1];
+            if (temp_uv.size() <= v1 - start)
+                temp_uv.resize(v1 - start + 1);
+            temp_uv[v1 - start] = allUVs[uv1 - 1];
+            temp_face.push_back(v2 - start);
+            if (temp_vert.size() <= v2 - start)
+                temp_vert.resize(v2 - start + 1);
+            temp_vert[v2 - start] = allVertices[v2 - 1];
+            if (temp_norm.size() <= v2 - start)
+                temp_norm.resize(v2 - start + 1);
+            temp_norm[v2 - start] = allNormals[n2 - 1];
+            if (temp_uv.size() <= v2 - start)
+                temp_uv.resize(v2 - start + 1);
+            temp_uv[v2 - start] = allUVs[uv2 - 1];
+            temp_face.push_back(v3 - start);
+            if (temp_vert.size() <= v3 - start)
+                temp_vert.resize(v3 - start + 1);
+            temp_vert[v3 - start] = allVertices[v3 - 1];
+            if (temp_norm.size() <= v3 - start)
+                temp_norm.resize(v3 - start + 1);
+            temp_norm[v3 - start] = allNormals[n3 - 1];
+            if (temp_uv.size() <= v3 - start)
+                temp_uv.resize(v3 - start + 1);
+            temp_uv[v3 - start] = allUVs[uv3 - 1];
+        } else if (stringMatch(newLine, "l ")) {
+            if (read_status != read_state::read_lines) {
+                read_status = read_state::read_lines;
+                temp_vert.clear();
+                temp_line.clear();
+            }
+            sscanf_s(newLine.c_str(), "l %u %u\n", &v1, &v2);
+            temp_line.push_back(v1 - start);
+            if (temp_vert.size() <= v1 - start) temp_vert.resize(v1 - start + 1);
+            temp_vert[v1 - start] = allVertices[v1 - 1];
+            temp_line.push_back(v2 - start);
+            if (temp_vert.size() <= v2 - start) temp_vert.resize(v2 - start + 1);
+            temp_vert[v2 - start] = allVertices[v2 - 1];
+            std::cout << "LOG: Curve '" << name << "': point [" << (v1 - start) << "]( z = " << temp_vert[v1 - start].z << ") -> [" << (v2 - start) << "]( z = " << temp_vert[v2 - start].z << ")\n";
+        } else if (stringMatch(newLine, "usemtl ")) {
+            mat.assign(newLine.substr(7, newLine.length() - 7));
+            std::cout << "LOG: '" << mat << "' material found.\n";
+        }
+    } while (!objfile.eof());
+    if (read_status == read_state::read_faces) {
+        allGameObj[name].addMesh(Mesh(temp_vert, temp_norm, temp_uv, temp_face));
+    } else if (read_status == read_state::read_lines) {
+        allGameObj[name].addCurve(Curve(temp_vert, temp_line));
+    }
+    fb1.close();
+    fb2.close();
+
+    return true;
+}
+
+void output(int x, int y, std::string str) {
+	int len, i;
+
+	glRasterPos2f(x, y);
+	len = str.length();
+
+	for (i = 0; i < len; i++) {
+		glutBitmapCharacter(font, str[i]);
+	}
+	glutPostRedisplay();
+}
+
+
+void prepareOpenGL() {
+    float ambient[4], diffuse[4], position[4];
+    string texturePath;
+    filebuf fb;
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Enables blending and alpha value
+    glEnable(GL_TEXTURE_2D);
+    glShadeModel(GL_SMOOTH);		 // Enables Smooth Shading
+    glClearColor(0.3f, 0.6f, 0.8f, 1.0f);
+    glClearDepth(1.0f);				// Depth Buffer Setup
+    glEnable(GL_DEPTH_TEST);		// Enables Depth Testing
+    glDepthFunc(GL_LEQUAL);			// The Type Of Depth Test To Do
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculation
+
+    glEnable(GL_LIGHT0);    // Uses default lighting parameters
+    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+    glEnable(GL_NORMALIZE);
+
+    glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient.toFloat4(ambient));
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse.toFloat4(diffuse));
+    glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular.toFloat4(diffuse));
+    glLightfv(GL_LIGHT1, GL_POSITION, LightPosition.toArray4f(position));
+    glEnable(GL_LIGHT1);
+    glColorMaterial(GL_FRONT, GL_DIFFUSE);
+}
+
+void prepareScene() {
+    const double pesci_bound[MAX_Pesci] = { 0.4, 0.4, 0.4, 0.25, 0.25, 0.25, 0.4, 0.4, 0.6 };
+    const double SCALE = 1.0;
+
+    game_state = GameState::GameState_TitleScreen;
+    game_score = 0;
+    allGameObj[Pugno_OBJ].hide();
+    allGameObj[Amo_OBJ].setBoundingBox2D(SCALE * 0.05, SCALE * 0.05);
+    for (int i = 0; i < 9; i++) {
+        allGameObj[pesci[i]].setBoundingBox2D(SCALE * pesci_bound[i], SCALE * pesci_bound[i]);
+        allGameObj[pesci[i]].hide();
+        allGameObj[pesci[i]].setState((int)pesce_state::pesce_inactive);
+        allTimers[pesci[i]] = Timer();
+    }
+    //allGameObj[Lago_OBJ].setBoundingBox2D(0.8 * xBound, 0.8 * yBound);
+    //allGameObj[Lago_OBJ].boundingBox.setOutside();
+
+    LightAmbient = ColorRGBA(20, 20, 20, 100);
+    LightDiffuse = ColorRGBA(120, 120, 120, 240);
+    LightSpecular = ColorRGBA(10, 10, 10, 155);
+    LightPosition = Vector3(0.0f, 0.0f, 15.0f);
+
+    allTimers["spawnFish"] = Timer(5.0);
+    allTimers["gameTimer"] = Timer(1.0);
+    allTimers["skillCheck"] = Timer(8.0);
+
+    MainCamera.lookAt(Vector3(-5.0, 0.0, 4.0), Vector3(0.0, 0.0, 0.0), Vector3(0.5, 0.0, 0.5));
+    MainCamera.setPersp(1.0, XRES, YRES, 1000.0);
+}
+
+void display(void) {
+
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	std::string text_row_1 = "This is written in a GLUT bitmap font.";
+	std::string text_row_2 = "(positioned in pixels with upper - left origin).";
+
+	output(0, 24, text_row_1);
+	output(50, 145, text_row_2);
+
+	glutSwapBuffers();
+}
+
+void reshape(int w, int h) {
+	glViewport(0, 0, w, h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0, w, h, 0);
+	glMatrixMode(GL_MODELVIEW);
+	glutPostRedisplay();
+
+}
+
+void repaint(void) {
+	glutPostRedisplay();
+}
+
+int main(int argc, char** argv) {
+	glutInit(&argc, argv);
+
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);
+	glutInitWindowSize(500, 150);
+	glutCreateWindow("Example 14");
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+
+    init(".\\models\\laghetto.obj");
+    prepareScene();
+    //prepareOpenGL();
+	glutDisplayFunc(display);
+	glutReshapeFunc(reshape);
+	glutIdleFunc(repaint);
+
+	glutMainLoop();
+	return 0;
+}

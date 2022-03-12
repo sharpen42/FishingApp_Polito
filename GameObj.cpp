@@ -101,8 +101,13 @@ Curve GameObj::addCurve(Curve c0) {
 	return t;
 }
 
-BoundingBox2D GameObj::setBoundingBox2D()
-{
+Texture GameObj::addTexture(Texture t0) {
+	Texture t = texture;
+	texture = t0;
+	return t;
+}
+
+BoundingBox2D GameObj::setBoundingBox2D() {
 	Vector2 max_d = Vector2(-HUGE_VAL, -HUGE_VAL), min_d = Vector2(HUGE_VAL, HUGE_VAL);
 	BoundingBox2D t = boundingBox;
 	if (mesh.isEmpty()) return t;
@@ -116,16 +121,14 @@ BoundingBox2D GameObj::setBoundingBox2D()
 	return t;
 }
 
-BoundingBox2D GameObj::setBoundingBox2D(double dx, double dy)
-{
+BoundingBox2D GameObj::setBoundingBox2D(double dx, double dy) {
 	BoundingBox2D t = boundingBox;
 	if (mesh.isEmpty()) return t;
 	boundingBox = BoundingBox2D(dx, dy, transform.position.xy());
 	return t;
 }
 
-BoundingBox2D GameObj::setBoundingBox2D(BoundingBox2D b)
-{
+BoundingBox2D GameObj::setBoundingBox2D(BoundingBox2D b) {
 	BoundingBox2D t = boundingBox;
 	boundingBox = b;
 	return t;
@@ -173,9 +176,18 @@ void GameObj::scale(float x, float y, float z) {
 	transform.scale.scale(x, y, z);
 }
 
+void GameObj::reScale() {
+	transform.scale.set(1, 1, 1);
+}
+
 void GameObj::setVelocity(Vector3 v) { 
 	// modifica solo la velocità
 	transform.setVelocity(v); 
+}
+
+void GameObj::setAcceleration(Vector3 v) {
+	// modifica solo l'accelerazione
+	transform.setAcceleration(v);
 }
 
 void GameObj::applyForce(Vector3 f){
@@ -199,8 +211,9 @@ void GameObj::show() { render = true;  }
 bool GameObj::isHidden() { return (!render); }
 
 void GameObj::renderOpenGL() {
-	if (!render) return;
+	static double a[] = { 2, -4, 2, -3, 4, -1, 1, 0, 0 };
 	bool has_texture = false;
+	if (!render) return;
 	// va chiamato dal Main Game loop
 	glPushMatrix();
 	glTranslated(transform.position.x, transform.position.y, transform.position.z);
@@ -208,10 +221,20 @@ void GameObj::renderOpenGL() {
 	glRotated(transform.rotation.z, 0, 0, 1);
 	glRotated(transform.rotation.y, 0, 1, 0);
 	glRotated(transform.rotation.x, 1, 0, 0);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_COLOR_MATERIAL);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); 
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glEnable(GL_LIGHTING); 
 	glEnable(GL_CULL_FACE);
+	glEnable(GL_COLOR_MATERIAL); 
+	if (texture.isEmpty()) {
+		glDisable(GL_TEXTURE_2D);
+		has_texture = false;
+		texture.UnBind();
+	} else {
+		glEnable(GL_TEXTURE_2D);
+		has_texture = true;
+		texture.Bind();
+	}
+
 	if (!mesh.isEmpty()) {
 		int prev_faceIndex = -1;
 		int V = mesh.sizeFaces();
@@ -221,69 +244,66 @@ void GameObj::renderOpenGL() {
 			double p[3] = { 0.0, 0.0, 0.0 };
 			int vertexIndex = mesh.faces[i];
 			int faceIndex = face_n(i);
+			float c[4] = {0.0, 0.0, 0.0, 1.0};
+			
 			if (materials.find(faceIndex) != materials.end()) {
-				float c[4];
 				if (prev_faceIndex == -1 || materials[faceIndex] != materials[prev_faceIndex]) {
-					glMaterialfv(GL_FRONT, GL_SPECULAR, materials[faceIndex].specular.toFloat4(c));
-					glMaterialfv(GL_FRONT, GL_AMBIENT, materials[faceIndex].ambient.toFloat4(c));
-					glMaterialfv(GL_FRONT, GL_EMISSION, materials[faceIndex].emission.toFloat4(c));
-					glMaterialfv(GL_FRONT, GL_DIFFUSE, materials[faceIndex].diffuse.toFloat4(c));
-					glColor4fv(materials[faceIndex].diffuse.toFloat4(c));
-					if (materials[faceIndex].texture.isEmpty()) {
-						if(has_texture) materials[prev_faceIndex].texture.UnBind();
-						has_texture = false;
-						glBindTexture(GL_TEXTURE_2D, 0);
-						glDisable(GL_TEXTURE_2D);
-					} else {
-						has_texture = true;
-						glEnable(GL_TEXTURE_2D);
-						materials[faceIndex].texture.Bind();
-					}
+					glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, materials[faceIndex].ambient.toFloat4(c));
+					glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, materials[faceIndex].diffuse.toFloat4(c));
+					glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, materials[faceIndex].specular.toFloat4(c));
+					glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, materials[faceIndex].emission.toFloat4(c));
 				}
 			}
+			glColor4fv(materials[faceIndex].diffuse.toFloat4(c));
 			if (has_texture) 
 				glTexCoord2d(mesh.uvs[vertexIndex].x, 1 - mesh.uvs[vertexIndex].y);
 			glNormal3dv(mesh.norms[vertexIndex].toArray(p));
 			glVertex3dv(mesh.verts[vertexIndex].toArray(p));
 			prev_faceIndex = faceIndex;
 		}
-		if(has_texture) materials[prev_faceIndex].texture.UnBind();
+		if (has_texture) {
+			glDisable(GL_TEXTURE_2D);
+			has_texture = false;
+			texture.UnBind();
+		}
 		glEnd();
 	}
-
+	/*
 	if (!curve.isEmpty()) {
-		if (curve.sizePoints() == 3) {
-			double a[] = { 2, -4, 2, -3, 4, -1, 1, 0, 0 };
-			const Mat3x3 line_matrix = Mat3x3(a);
-			Vector3 coeff_x, coeff_y, coeff_z;
-			Vector3 x_coord, y_coord, z_coord;
-			double step = 1.0 / (double)CURVE_DEF;
+		if (curve.sizePoints() == 4) {
+			double t[] = {  curve.points[1].x, curve.points[1].y, curve.points[1].z,
+							curve.points[2].x, curve.points[2].y, curve.points[2].z,
+							curve.points[3].x, curve.points[3].y, curve.points[3].z };
+			Mat3x3 line_matrix = Mat3x3(a);
+			Mat3x3 coord = Mat3x3(t);
+			Mat3x3 coeff = coord.mult(line_matrix);
+			double v[3], ds, ds2, step = 1.0 / (double)CURVE_DEF;
 
-			x_coord = Vector3(curve.points[0].x, curve.points[1].x, curve.points[2].x);
-			y_coord = Vector3(curve.points[0].y, curve.points[1].y, curve.points[2].y);
-			z_coord = Vector3(curve.points[0].z, curve.points[1].z, curve.points[2].z);
-			coeff_x = x_coord.mult3(line_matrix);
-			coeff_y = y_coord.mult3(line_matrix);
-			coeff_z = z_coord.mult3(line_matrix);
-
+			glColor4f(0.0, 0.0, 0.0, 0.7);
 			glBegin(GL_LINES);
 			for (int i = 0; i < CURVE_DEF; i++) {
-				double ds = step * (float)i;
-				double ds2 = ds * ds;
-				glVertex3d(ds2 * coeff_x.x + ds * coeff_x.y + coeff_x.z,
-						   ds2 * coeff_y.x + ds * coeff_y.y + coeff_y.z,
-						   ds2 * coeff_z.x + ds * coeff_z.y + coeff_z.z);
+				ds = step * (float)i;
+				ds2 = ds * ds;
+				glVertex3dv(Vector3(ds2, ds, 1).mult3(coeff).toArray(v));
 				ds += step;
 				ds2 = ds * ds;
-				glVertex3d(ds2 * coeff_x.x + ds * coeff_x.y + coeff_x.z,
-						   ds2 * coeff_y.x + ds * coeff_y.y + coeff_y.z,
-						   ds2 * coeff_z.x + ds * coeff_z.y + coeff_z.z);
-
+				glVertex3dv(Vector3(ds2, ds, 1).mult3(coeff).toArray(v));
+			}
+			glEnd();
+		} else {
+			double v[3];
+			glColor4f(0.0, 0.0, 0.0, 1.0);
+			glBegin(GL_LINES);
+			for (int i = 0; i < curve.sizeSegments() - 1; i++) {
+				glVertex3dv(curve.points[curve.segments[i]].toArray(v));
+				glVertex3dv(curve.points[curve.segments[i + 1]].toArray(v));
 			}
 			glEnd();
 		}
-
-	}
+	}*/
+	glDisable(GL_LIGHTING);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_COLOR_MATERIAL);
 	glPopMatrix();
 }
 
@@ -393,14 +413,6 @@ void Camera::lookAt(Vector3 pos0, Vector3 foc0, Vector3 up0) {
 	left = forward.cross(up).normalize();
 }
 
-void Camera::setPersp(float n, float w, float h, float f) {
-	const double aspectRatio = w / h, fieldOfView = 45.0;
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(fieldOfView, aspectRatio, n, f);  // Znear and Zfar 
-}
-
 bool Camera::hasMoved() {
 	bool t = has_moved;
 	has_moved = false;
@@ -454,10 +466,6 @@ Mat4x4 scale(double sx, double sy, double sz) {
 	return t;
 }
 
-Vector3 i() { return I; }
-Vector3 j() { return J; }
-Vector3 k() { return K; }
-
 
 BoundingBox2D::BoundingBox2D(){
 	position = Vector2();
@@ -481,15 +489,14 @@ bool BoundingBox2D::isEmpty() { return (dimensions.x == 0.0 && dimensions.y == 0
 
 bool BoundingBox2D::collide(Vector2 v) {
 	Vector2 t = v - position;
-	bool res = (t.x > -dimensions.x && t.x < dimensions.x && t.y > -dimensions.y && t.y < dimensions.y);
+	bool res = (abs(t.x) < dimensions.x && abs(t.y) < dimensions.y);
 	if (inside)	return (res);
 	else return !(res);
 }
 
 bool BoundingBox2D::collide(BoundingBox2D b) {
 	Vector2 ab = position - b.position;
-	bool res = ((abs(ab.x + dimensions.x) < b.dimensions.x || abs(ab.x - dimensions.x) < b.dimensions.x) &&
-				(abs(ab.y + dimensions.y) < b.dimensions.y || abs(ab.y - dimensions.y) < b.dimensions.y));
+	bool res = ((abs(ab.x) < dimensions.x + b.dimensions.x) && (abs(ab.y) < dimensions.y + b.dimensions.y));
 	if (b.inside)	return (res);
 	else return (!res);
 }

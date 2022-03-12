@@ -97,3 +97,9 @@ double* Curve::pointsArray()
 
 	return v;
 }
+
+void Curve::follow(Vector3 v1, Vector3 v2) {
+	points[1].sum(v1.x, v1.y, v1.z);
+	points[1].sum(v2.x, v2.y, v2.z);
+	points[2].set((v1.x + v2.x) * 0.3, (v1.y + v2.y) * 0.3, (v1.z + v2.z) * 0.5);
+}
