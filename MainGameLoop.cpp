@@ -70,8 +70,8 @@ difficulty_level difficulty = difficulty_level::medium;
 
 Texture background;
 
-Button difficulty_buttons[3], back, score_buttons[5];
-Quad2D buttons[4];
+//Button ;
+Quad2D buttons[4], back, difficulty_buttons[3], score_buttons[5];
 Scoreboard score_easy[5], score_medium[5], score_hard[5];
 
 void* font = GLUT_BITMAP_TIMES_ROMAN_24;
@@ -88,6 +88,7 @@ Camera MainCamera;
 float LightAmbient[4];
 float LightDiffuse[4];
 float LightPosition[4];
+float LightSpecular[4];
 
 //irrklang::ISoundEngine* soundEngine;
 
@@ -182,21 +183,45 @@ void output(int x, int y, std::string str) {
 }
 
 void InitMenu() {
-    buttons[0] = Quad2D(Vector2(0, 0.25), 0.8, 0.1);
-    buttons[0].applyColor(ColorRGBA::White());
-    buttons[0].applyText("Play", ColorRGBA::Blue());
+    buttons[0] = Quad2D(Vector2(0, 0.2), 0.8, 0.1);
+    buttons[0].applyText("Play", ColorRGBA::White());
 
-    buttons[1] = Quad2D(Vector2(0, 0.25), 0.8, 0.1);
-    buttons[1].applyColor(ColorRGBA::White());
-    buttons[1].applyText("Set difficulty", ColorRGBA::Blue());
+    buttons[1] = Quad2D(Vector2(0, 0.0), 0.8, 0.1);
+    buttons[1].applyText("Set difficulty", ColorRGBA::White());
 
-    buttons[2] = Quad2D(Vector2(0, 0.25), 0.8, 0.1);
-    buttons[2].applyColor(ColorRGBA::White());
-    buttons[2].applyText("Scoreboard", ColorRGBA::Blue());
+    buttons[2] = Quad2D(Vector2(0,-0.2), 0.8, 0.1);
+    buttons[2].applyText("Scoreboard", ColorRGBA::White());
 
-    buttons[3] = Quad2D(Vector2(0, 0.25), 0.8, 0.1);
-    buttons[3].applyColor(ColorRGBA::White());
-    buttons[3].applyText("Quit", ColorRGBA::Blue());
+    buttons[3] = Quad2D(Vector2(0,-0.8), 0.8, 0.1);
+    buttons[3].applyText("Quit", ColorRGBA::White());
+
+    difficulty_buttons[0] = Quad2D(Vector2(0, 0.20), 0.8, 0.1);
+    difficulty_buttons[0].applyText("Easy", ColorRGBA::White());
+
+    difficulty_buttons[1] = Quad2D(Vector2(0, 0.0), 0.8, 0.1);
+    difficulty_buttons[1].applyText("Medium", ColorRGBA::White());
+
+    difficulty_buttons[2] = Quad2D(Vector2(0, -0.20), 0.8, 0.1);
+    difficulty_buttons[2].applyText("Hard", ColorRGBA::White());
+
+    back = Quad2D(Vector2(0.8, 0.8), 0.1, 0.1 * XRES / YRES);
+    back.applyTexture(Texture(".\\models\\textures\\back_button_2.png"));
+
+    score_buttons[0] = Quad2D(Vector2(0, 0.2), 0.2, 0.1);
+    score_buttons[0].applyColor(ColorRGBA::Grey(0.2));
+
+    score_buttons[1] = Quad2D(Vector2(0, 0.0), 0.2, 0.1);
+    score_buttons[1].applyColor(ColorRGBA::Grey(0.2));
+
+    score_buttons[2] = Quad2D(Vector2(0, -0.2), 0.2, 0.1);
+    score_buttons[2].applyColor(ColorRGBA::Grey(0.2));
+
+    score_buttons[3] = Quad2D(Vector2(0, -0.4), 0.2, 0.1);
+    score_buttons[3].applyColor(ColorRGBA::Grey(0.2));
+
+    score_buttons[4] = Quad2D(Vector2(0, -0.6), 0.2, 0.1);
+    score_buttons[4].applyColor(ColorRGBA::Grey(0.2));
+
     /*
     buttons[0].xmin = -0.4;
     buttons[0].xmax = 0.4;
@@ -229,8 +254,10 @@ void InitMenu() {
     buttons[3].text = "Quit";
     buttons[3].tx = FromPixelToNormalized(XRES / 2 - glutBitmapLength(font, (const unsigned char*)"Quit") / 2, 1);
     buttons[3].ty = FromPixelToNormalized(YRES - 68, -1);
+    */
 
 
+    /*
     difficulty_buttons[0].xmin = -0.4;
     difficulty_buttons[0].xmax = 0.4;
     difficulty_buttons[0].ymin = 0.15;
@@ -254,7 +281,7 @@ void InitMenu() {
     difficulty_buttons[2].text = "Hard";
     difficulty_buttons[2].tx = FromPixelToNormalized(XRES / 2 - glutBitmapLength(font, (const unsigned char*)"Hard") / 2, 1);
     difficulty_buttons[2].ty = FromPixelToNormalized(YRES / 2 + 68, -1);
-
+    
 
     back.xmin = 0.9;
     back.xmax = 1;
@@ -263,7 +290,6 @@ void InitMenu() {
     back.text = "X";
     back.tx = FromPixelToNormalized(XRES - glutBitmapLength(font, (const unsigned char*)"X") * 1.5, 1);
     back.ty = FromPixelToNormalized(24, -1);
-
 
     score_buttons[0].xmin = -0.3;
     score_buttons[0].xmax = 0.3;
@@ -295,6 +321,7 @@ void InitMenu() {
     score_buttons[4].ymax = -0.55;
     score_buttons[4].ty = FromPixelToNormalized(YRES / 2 + 188, -1);
     */
+
 }
 
 void ReadFile(const char* filename, difficulty_level difficulty) {
@@ -357,31 +384,32 @@ void PickButton(int x, int y) {
 
     if (game_state == GameState::GameState_TitleScreen) {
         switch (CurrentState) {
-        case menu_state::menu:/*
+        case menu_state::menu:
             for (int i = 0; i < n_buttons; i++) {
-                if ((ox >= buttons[i].xmin) && (ox <= buttons[i].xmax) && (oy >= buttons[i].ymin) && (oy <= buttons[i].ymax))
-                    buttons[i].over = true;
-                else
-                    buttons[i].over = false;
-            }*/
+                if (ox >= buttons[i].position.x - buttons[i].dim_x && ox <= buttons[i].position.x + buttons[i].dim_x &&
+                    oy >= buttons[i].position.y - buttons[i].dim_y && oy <= buttons[i].position.y + buttons[i].dim_y)
+                    buttons[i].mouseOver(true);
+                else buttons[i].mouseOver(false);
+            }
             break;
         case menu_state::setDifficulty:
             for (int i = 0; i < n_difficulty_buttons; i++) {
-                if ((ox >= difficulty_buttons[i].xmin) && (ox <= difficulty_buttons[i].xmax) && (oy >= difficulty_buttons[i].ymin) && (oy <= difficulty_buttons[i].ymax))
-                    difficulty_buttons[i].over = true;
-                else
-                    difficulty_buttons[i].over = false;
+                if (ox >= difficulty_buttons[i].position.x - difficulty_buttons[i].dim_x && ox <= difficulty_buttons[i].position.x + difficulty_buttons[i].dim_x &&
+                    oy >= difficulty_buttons[i].position.y - difficulty_buttons[i].dim_y && oy <= difficulty_buttons[i].position.y + difficulty_buttons[i].dim_y)
+                    difficulty_buttons[i].mouseOver(true);
+                else difficulty_buttons[i].mouseOver(false);
             }
-            if ((ox >= back.xmin) && (ox <= back.xmax) && (oy >= back.ymin) && (oy <= back.ymax))
-                back.over = true;
-            else
-                back.over = false;
+
+            if (ox >= back.position.x - back.dim_x && ox <= back.position.x + back.dim_x &&
+                oy >= back.position.y - back.dim_y && oy <= back.position.y + back.dim_y)
+                back.mouseOver(true);
+            else back.mouseOver(false);
             break;
         case menu_state::scoreboard:
-            if ((ox >= back.xmin) && (ox <= back.xmax) && (oy >= back.ymin) && (oy <= back.ymax))
-                back.over = true;
-            else
-                back.over = false;
+            if (ox >= back.position.x - back.dim_x && ox <= back.position.x + back.dim_x &&
+                oy >= back.position.y - back.dim_y && oy <= back.position.y + back.dim_y)
+                back.mouseOver(true);
+            else back.mouseOver(false);
             break;
         default:
             break;
@@ -420,8 +448,8 @@ void myMouse(int button, int state, int x, int y) {
             switch (CurrentState) {
             case menu_state::menu:
                 for (int i = 0; i < n_buttons; i++) {
-                    //if ((ox >= buttons[i].xmin) && (ox <= buttons[i].xmax) && (oy >= buttons[i].ymin) && (oy <= buttons[i].ymax))
-                        //pressed = i;
+                    if(buttons[i].isOver())
+                        pressed = i;
                 }
 
                 if (pressed == -1)
@@ -447,11 +475,13 @@ void myMouse(int button, int state, int x, int y) {
                 break;
             case menu_state::setDifficulty:
                 for (int i = 0; i < n_difficulty_buttons; i++) {
-                    if ((ox >= difficulty_buttons[i].xmin) && (ox <= difficulty_buttons[i].xmax) && (oy >= difficulty_buttons[i].ymin) && (oy <= difficulty_buttons[i].ymax))
+                    //if ((ox >= difficulty_buttons[i].xmin) && (ox <= difficulty_buttons[i].xmax) && (oy >= difficulty_buttons[i].ymin) && (oy <= difficulty_buttons[i].ymax))
+                    if (difficulty_buttons[i].isOver())
                         pressed = i;
                 }
 
-                if ((ox >= back.xmin) && (ox <= back.xmax) && (oy >= back.ymin) && (oy <= back.ymax))
+                //if ((ox >= back.xmin) && (ox <= back.xmax) && (oy >= back.ymin) && (oy <= back.ymax))
+                if(back.isOver())
                     pressed = -2;
 
                 if (pressed == -1)
@@ -479,7 +509,8 @@ void myMouse(int button, int state, int x, int y) {
                 CurrentState = menu_state::menu;
                 break;
             case menu_state::scoreboard:
-                if ((ox >= back.xmin) && (ox <= back.xmax) && (oy >= back.ymin) && (oy <= back.ymax))
+                //if ((ox >= back.xmin) && (ox <= back.xmax) && (oy >= back.ymin) && (oy <= back.ymax))
+                if(back.isOver())
                     pressed = -2;
                 if (pressed == -2)
                     CurrentState = menu_state::menu;
@@ -492,18 +523,26 @@ void myMouse(int button, int state, int x, int y) {
 }
 
 void Menu() {
-    static Texture tex = Texture(".\\models\\textures\\water_splash.png");
+    static Texture tex = Texture(".\\models\\textures\\logo_tutorial.png");
 
     Quad2D::DrawQuad(Vector2(), 2, 2, background);
     //Quad2D::DrawQuad(Vector2(-0.7, 0.3), 0.4, 0.4, "provaprovaprova", ColorRGBA::Yellow(), tex);
     //Quad2D::DrawQuad(Vector2(0.7, 0.5), 0.7, 0.2, "provaprovaprova", ColorRGBA::Yellow(), ColorRGBA());
 
+    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * XRES / YRES, tex);
+    for (int i = 0; i < n_buttons; i++) {
+        Quad2D::DrawQuad(buttons[i].position, buttons[i].dim_x * 2 + 0.01, buttons[i].dim_y * 2 + 0.01, ColorRGBA(0.8f, 0.8f, 0.2f, 1.0f));
+        if (buttons[i].isOver()) buttons[i].applyColor(ColorRGBA::Grey(0.4)); // TODO
+        else buttons[i].applyColor(ColorRGBA::Grey(0.2));
+        buttons[i].drawOpenGL();
+    }
+
+    /*
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
 
     for (int i = 0; i < n_buttons; i++) {
-        /*
         glPushAttrib(GL_CURRENT_BIT);
         if (buttons[i].over == true) glColor3f(0.4, 0.4, 0.4);
         else glColor3f(1.0, 1.0, 1.0);
@@ -515,7 +554,6 @@ void Menu() {
         glVertex2f(buttons[i].xmin, buttons[i].ymin);
         glEnd();
         glPopAttrib();
-        */
     }
 
     gluOrtho2D(0, XRES, YRES, 0);
@@ -534,10 +572,34 @@ void Menu() {
 
     glPopAttrib(); // This sets the colour back to its original value
     glPopMatrix();
+        */
 }
 
 void SetDifficulty() {
     Quad2D::DrawQuad(Vector2(), 2, 2, background);
+
+    back.dim_y = back.dim_x * XRES / YRES;
+    back.drawOpenGL();
+    for (int i = 0; i < n_difficulty_buttons; i++) {
+        Quad2D::DrawQuad(difficulty_buttons[i].position, difficulty_buttons[i].dim_x * 2 + 0.01, difficulty_buttons[i].dim_y * 2 + 0.01, ColorRGBA(0.8f, 0.8f, 0.2f, 1.0f));
+        if (i == (int)difficulty || difficulty_buttons[i].isOver() == true) {
+            if (difficulty_buttons[i].isOver() == true && i != (int)difficulty)
+                difficulty_buttons[i].applyColor(ColorRGBA::Grey(0.4));
+            else switch (difficulty) {
+            case difficulty_level::easy:
+                //difficulty_buttons[i].applyColor(ColorRGBA::Green()); break;
+                difficulty_buttons[i].applyColor(ColorRGBA(0.1f, 0.6f, 0.2f, 1.0f)); break;
+            case difficulty_level::medium:
+                //difficulty_buttons[i].applyColor(ColorRGBA::Yellow()); break;
+                difficulty_buttons[i].applyColor(ColorRGBA(0.6f, 0.6f, 0.1f, 1.0f)); break;
+            case difficulty_level::hard:
+                //difficulty_buttons[i].applyColor(ColorRGBA::Red()); break;
+                difficulty_buttons[i].applyColor(ColorRGBA(0.6f, 0.2f, 0.1f, 1.0f)); break;
+            }
+        } else difficulty_buttons[i].applyColor(ColorRGBA::Grey(0.2));
+        difficulty_buttons[i].drawOpenGL();
+    }
+    /*
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -554,7 +616,7 @@ void SetDifficulty() {
     glEnd();
     if (back.over == true)
         glPopAttrib();
-
+    glPopMatrix();
     for (int i = 0; i < n_difficulty_buttons; i++) {
         glPushAttrib(GL_CURRENT_BIT);
         if (i == (int)difficulty || difficulty_buttons[i].over == true) {
@@ -596,6 +658,7 @@ void SetDifficulty() {
         output(FromNormalizedToPixel(difficulty_buttons[i].tx, 1), FromNormalizedToPixel(difficulty_buttons[i].ty, -1), difficulty_buttons[i].text);
 
     glPopAttrib();
+    */
 }
 
 void ScoreBoard() {
@@ -604,10 +667,53 @@ void ScoreBoard() {
     tm ts;
 
     Quad2D::DrawQuad(Vector2(), 2, 2, background);
+
+    back.dim_y = back.dim_x * XRES / YRES;
+    back.drawOpenGL();
+    Quad2D::DrawQuad(Vector2(0, 0.6), 0.61, 0.11, ColorRGBA::Grey(0.2));
+    switch (difficulty) {
+    case difficulty_level::easy:
+        Quad2D::DrawQuad(Vector2(0, 0.6), 0.6, 0.1, "ScoreBoard: Easy", ColorRGBA::White(), ColorRGBA(0.2f, 0.6f, 0.1f, 1.0f));
+        break;
+    case difficulty_level::medium:
+        Quad2D::DrawQuad(Vector2(0, 0.6), 0.6, 0.1, "ScoreBoard: Medium", ColorRGBA::White(), ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
+        break;
+    case difficulty_level::hard:
+        Quad2D::DrawQuad(Vector2(0, 0.6), 0.6, 0.1, "ScoreBoard: Hard", ColorRGBA::White(), ColorRGBA(0.6f, 0.2f, 0.1f, 1.0f));
+        break;
+    default:break;
+    }
+    
+    for (int i = 0; i < n_score; i++) {
+        switch (difficulty) {
+        case difficulty_level::easy:
+            str = std::to_string(score_easy[i].score);
+            ts = FixMonth(score_easy[i].timestamp, -1);
+            break;
+        case difficulty_level::medium:
+            str = std::to_string(score_easy[i].score);
+            ts = FixMonth(score_easy[i].timestamp, -1);
+            break;
+        case difficulty_level::hard:
+            str = std::to_string(score_easy[i].score);
+            ts = FixMonth(score_easy[i].timestamp, -1);
+            break;
+        default:break;
+        }
+        sprintf_s(buffer, "%04d/%02d/%02d %02d:%02d:%02d", ts.tm_year, ts.tm_mon, ts.tm_mday, ts.tm_hour, ts.tm_min, ts.tm_sec);
+
+        Quad2D::DrawQuad(score_buttons[i].position, score_buttons[i].dim_x * 2 + 0.01, score_buttons[i].dim_y * 2 + 0.01, ColorRGBA(0.8f, 0.8f, 0.2f, 1.0f));
+        score_buttons[i].applyText(str, ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
+        score_buttons[i].drawOpenGL();
+        str = buffer;
+        Quad2D::DrawQuad(score_buttons[i].position - Vector2::I() * 0.5, 0.6, 0.1, str, ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f), ColorRGBA::Grey(0.2));
+    }
+
+    /*
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-
+    
     if (back.over == true) {
         glPushAttrib(GL_CURRENT_BIT);
         glColor3f(0.4, 0.4, 0.4);
@@ -622,19 +728,21 @@ void ScoreBoard() {
         glPopAttrib();
 
     for (int i = 0; i < n_score; i++) {
+
         glBegin(GL_QUADS);
         glVertex2f(score_buttons[i].xmax, score_buttons[i].ymin);
         glVertex2f(score_buttons[i].xmax, score_buttons[i].ymax);
         glVertex2f(score_buttons[i].xmin, score_buttons[i].ymax);
         glVertex2f(score_buttons[i].xmin, score_buttons[i].ymin);
         glEnd();
+
     }
 
     glPopMatrix();
 
 
     glPushAttrib(GL_CURRENT_BIT);
-    glColor3f(0.0, 1.0, 0.8);
+    glColor3f(1.0, 1.0, 1.0);
 
     if (difficulty == difficulty_level::easy)
         output(XRES / 2 - glutBitmapLength(font, (const unsigned char*)"Scoreboard: Easy") / 2, 144, "Scoreboard: Easy");
@@ -648,14 +756,14 @@ void ScoreBoard() {
     glPushAttrib(GL_CURRENT_BIT);
     glColor3f(0.0, 0.0, 1.0);
 
-    output(FromNormalizedToPixel(back.tx, 1), FromNormalizedToPixel(back.ty, -1), back.text);
+    //output(FromNormalizedToPixel(back.tx, 1), FromNormalizedToPixel(back.ty, -1), back.text);
     for (int i = 0; i < n_score; i++) {
         if (difficulty == difficulty_level::easy) {
             str = std::to_string(score_easy[i].score);
             ts = FixMonth(score_easy[i].timestamp, -1);
             sprintf_s(buffer, "%04d/%02d/%02d %02d:%02d:%02d", ts.tm_year, ts.tm_mon, ts.tm_mday, ts.tm_hour, ts.tm_min, ts.tm_sec);
 
-            output(XRES / 2 - glutBitmapLength(font, (const unsigned char*)str.c_str()) / 2, FromNormalizedToPixel(score_buttons[i].ty, -1), str);
+            output(XRES / 2 - glutBitmapLength(font, (const unsigned char*)str.c_str()) / 2, FromNormalizedToPixel(score_buttons[i].position.y, -1), str);
             str = buffer;
             output(XRES / 10, FromNormalizedToPixel(score_buttons[i].ty, -1), str);
         } else if (difficulty == difficulty_level::medium) {
@@ -671,12 +779,13 @@ void ScoreBoard() {
             ts = FixMonth(score_hard[i].timestamp, -1);
             sprintf_s(buffer, "%04d/%02d/%02d %02d:%02d:%02d", ts.tm_year, ts.tm_mon, ts.tm_mday, ts.tm_hour, ts.tm_min, ts.tm_sec);
 
-            output(XRES / 2 - glutBitmapLength(font, (const unsigned char*)str.c_str()) / 2, FromNormalizedToPixel(score_buttons[i].ty, -1), str);
+            output(XRES / 2 - glutBitmapLength(font, (const unsigned char*)str.c_str()) / 2, FromNormalizedToPixel(score_buttons[i].position.y, -1), str);
             str = buffer;
             output(XRES / 10, FromNormalizedToPixel(score_buttons[i].ty, -1), str);
         }
     }
     glPopAttrib();
+    */
 }
 
 bool init(string path) {
@@ -737,10 +846,10 @@ bool init(string path) {
             e.set(x, y, z, 1.0);
         } else if (stringMatch(newLine, "d ")) {
             sscanf_s(newLine.c_str(), "d %f\n", &x);
-            a.setAlpha(1.0);
+            a.setAlpha(x);
             d.setAlpha(x);
             s.setAlpha(1.0);
-            e.setAlpha(1.0);
+            e.setAlpha(x);
         } else if (stringMatch(newLine, "map_Kd ")) {
             has_Texture = true;
             tex_path = ".\\models\\" + newLine.substr(7, newLine.length() - 7);
@@ -882,6 +991,7 @@ void prepareScene() {
     setFloat4(LightAmbient, 0.5f, 0.5f, 0.5f, 1.0f);
     setFloat4(LightDiffuse, 1.0f, 1.0f, 1.0f, 1.0f);
     setFloat4(LightPosition, 0.0f, 0.0f, 15.0f, 1.0f);
+    setFloat4(LightSpecular, 0.1f, 0.1f, 0.1f, 0.5f);
 
     allTimers["spawnFish"] = Timer(5.0);
     allTimers["gameTimer"] = Timer(1.0);
@@ -910,6 +1020,7 @@ void prepareOpenGL() {
     */
     glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
     glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
     glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
     glEnable(GL_LIGHT1);
     

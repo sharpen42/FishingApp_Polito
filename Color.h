@@ -19,8 +19,8 @@ private:
 
 public:
 	ColorRGBA(); // =transparency, no color
-	ColorRGBA(float r, float g, float b, float a);
 	ColorRGBA(int r, int g, int b, int a);
+	ColorRGBA(float r, float g, float b, float a);
 
 	bool operator==(ColorRGBA);
 	bool operator!=(ColorRGBA);
