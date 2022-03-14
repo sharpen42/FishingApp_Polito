@@ -3,16 +3,18 @@
 #include <fstream>
 #include <cstdio>
 #include <cstdlib>
+#include <cctype>
 
 #include <GL/glut.h>
 //#include <irrKlang.h>
 #include <Windows.h>
 
 #include "GameObj.h"
+#include "Quad2D.h"
 #include "Timer.h"
 
 #define MAX_Pesci 9
-#define SEC_Duration 20
+#define SEC_Duration 40
 
 #define deg2rad(x) ((x) * (2 * PI) / 360.0)
 #define rad2deg(x) ((x) * 360.0 / (2 * PI))
@@ -66,8 +68,10 @@ int n_buttons = 4, n_difficulty_buttons = 3, n_score = 5;
 menu_state CurrentState = menu_state::menu; // initiation global variable
 difficulty_level difficulty = difficulty_level::medium;
 
+Texture background;
 
-Button buttons[4], difficulty_buttons[3], back, score_buttons[5];
+Button difficulty_buttons[3], back, score_buttons[5];
+Quad2D buttons[4];
 Scoreboard score_easy[5], score_medium[5], score_hard[5];
 
 void* font = GLUT_BITMAP_TIMES_ROMAN_24;
@@ -104,10 +108,10 @@ int game_time = SEC_Duration;
 
 
 const std::string pesci[MAX_Pesci] = {
-        "TrotaA_6", "TrotaB_7", "TrotaC_8",
-        "PersicoA_9", "PersicoB_10", "PersicoC_11",
-        "CarpaA_12", "CarpaB_13",
-        "LuccioA_14"
+        "Trota0_6", "Trota1_7", "Trota2_8",
+        "Persico0_9", "Persico1_10", "Persico2_11",
+        "Carpa0_12", "Carpa1_13",
+        "Luccio0_14"
 };
 
 void changeSize(int w, int h);
@@ -178,10 +182,26 @@ void output(int x, int y, std::string str) {
 }
 
 void InitMenu() {
+    buttons[0] = Quad2D(Vector2(0, 0.25), 0.8, 0.1);
+    buttons[0].applyColor(ColorRGBA::White());
+    buttons[0].applyText("Play", ColorRGBA::Blue());
+
+    buttons[1] = Quad2D(Vector2(0, 0.25), 0.8, 0.1);
+    buttons[1].applyColor(ColorRGBA::White());
+    buttons[1].applyText("Set difficulty", ColorRGBA::Blue());
+
+    buttons[2] = Quad2D(Vector2(0, 0.25), 0.8, 0.1);
+    buttons[2].applyColor(ColorRGBA::White());
+    buttons[2].applyText("Scoreboard", ColorRGBA::Blue());
+
+    buttons[3] = Quad2D(Vector2(0, 0.25), 0.8, 0.1);
+    buttons[3].applyColor(ColorRGBA::White());
+    buttons[3].applyText("Quit", ColorRGBA::Blue());
+    /*
     buttons[0].xmin = -0.4;
     buttons[0].xmax = 0.4;
     buttons[0].ymin = 0.2;
-    buttons[0].ymax = 0.30;
+    buttons[0].ymax = 0.3;
     buttons[0].text = "Play";
     buttons[0].tx = FromPixelToNormalized(XRES / 2 - glutBitmapLength(font, (const unsigned char*)"Play") / 2, 1);
     buttons[0].ty = FromPixelToNormalized(YRES / 2 - 68, -1);
@@ -274,6 +294,7 @@ void InitMenu() {
     score_buttons[4].ymin = -0.65;
     score_buttons[4].ymax = -0.55;
     score_buttons[4].ty = FromPixelToNormalized(YRES / 2 + 188, -1);
+    */
 }
 
 void ReadFile(const char* filename, difficulty_level difficulty) {
@@ -336,13 +357,13 @@ void PickButton(int x, int y) {
 
     if (game_state == GameState::GameState_TitleScreen) {
         switch (CurrentState) {
-        case menu_state::menu:
+        case menu_state::menu:/*
             for (int i = 0; i < n_buttons; i++) {
                 if ((ox >= buttons[i].xmin) && (ox <= buttons[i].xmax) && (oy >= buttons[i].ymin) && (oy <= buttons[i].ymax))
                     buttons[i].over = true;
                 else
                     buttons[i].over = false;
-            }
+            }*/
             break;
         case menu_state::setDifficulty:
             for (int i = 0; i < n_difficulty_buttons; i++) {
@@ -399,8 +420,8 @@ void myMouse(int button, int state, int x, int y) {
             switch (CurrentState) {
             case menu_state::menu:
                 for (int i = 0; i < n_buttons; i++) {
-                    if ((ox >= buttons[i].xmin) && (ox <= buttons[i].xmax) && (oy >= buttons[i].ymin) && (oy <= buttons[i].ymax))
-                        pressed = i;
+                    //if ((ox >= buttons[i].xmin) && (ox <= buttons[i].xmax) && (oy >= buttons[i].ymin) && (oy <= buttons[i].ymax))
+                        //pressed = i;
                 }
 
                 if (pressed == -1)
@@ -471,16 +492,21 @@ void myMouse(int button, int state, int x, int y) {
 }
 
 void Menu() {
+    static Texture tex = Texture(".\\models\\textures\\water_splash.png");
+
+    Quad2D::DrawQuad(Vector2(), 2, 2, background);
+    //Quad2D::DrawQuad(Vector2(-0.7, 0.3), 0.4, 0.4, "provaprovaprova", ColorRGBA::Yellow(), tex);
+    //Quad2D::DrawQuad(Vector2(0.7, 0.5), 0.7, 0.2, "provaprovaprova", ColorRGBA::Yellow(), ColorRGBA());
+
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-    //gluOrtho2D(0, XRES, YRES, 0);
 
     for (int i = 0; i < n_buttons; i++) {
+        /*
         glPushAttrib(GL_CURRENT_BIT);
-        if (buttons[i].over == true) {
-            glColor3f(0.4, 0.4, 0.4);
-        } else glColor3f(1.0, 1.0, 1.0);
+        if (buttons[i].over == true) glColor3f(0.4, 0.4, 0.4);
+        else glColor3f(1.0, 1.0, 1.0);
         glBegin(GL_QUADS);
         // TODO: binding texture
         glVertex2f(buttons[i].xmax, buttons[i].ymin);
@@ -489,10 +515,10 @@ void Menu() {
         glVertex2f(buttons[i].xmin, buttons[i].ymin);
         glEnd();
         glPopAttrib();
+        */
     }
 
-    glPopMatrix();
-
+    gluOrtho2D(0, XRES, YRES, 0);
     glPushAttrib(GL_CURRENT_BIT);
     glColor3f(0.0, 0.2, 0.4);
 
@@ -507,9 +533,11 @@ void Menu() {
         output(FromNormalizedToPixel(buttons[i].tx, 1), FromNormalizedToPixel(buttons[i].ty, -1), buttons[i].text);
 
     glPopAttrib(); // This sets the colour back to its original value
+    glPopMatrix();
 }
 
 void SetDifficulty() {
+    Quad2D::DrawQuad(Vector2(), 2, 2, background);
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -575,6 +603,7 @@ void ScoreBoard() {
     char buffer[50];
     tm ts;
 
+    Quad2D::DrawQuad(Vector2(), 2, 2, background);
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -836,6 +865,8 @@ void prepareScene() {
 
     game_state = GameState::GameState_TitleScreen;
     game_score = 0;
+    background = Texture(".\\models\\textures\\render_sfondo.png");
+
     allGameObj[Splash_OBJ].hide();
     allGameObj[Pugno_OBJ].hide();
     allGameObj[Amo_OBJ].setBoundingBox2D(SCALE * 0.05, SCALE * 0.05);
@@ -858,6 +889,8 @@ void prepareScene() {
 
     MainCamera.lookAt(Vector3(-5.0, 0.0, 4.0), Vector3(0.0, 0.0, 0.0), Vector3(0.5, 0.0, 0.5));
 }
+
+//void resetScene(){}
 
 void prepareOpenGL() {    
     glEnable(GL_BLEND);
@@ -948,7 +981,8 @@ void updateScene(double deltaTime) {
         {-0.3 * xBound, 0.3 * yBound}, {0, 0.3 * yBound}, {0.3 * xBound, 0.3 * yBound},
         {-0.3 * xBound,-0.3 * yBound}, {0,-0.3 * yBound}, {0.3 * xBound,-0.3 * yBound}
     };
-    static int n_bonus = 0, pesce_bonus = 0;
+    static int n_bonus = 1; 
+    static std::string pesce_bonus = "";
     double dist = allGameObj[Canna_OBJ].transform.position.distance(allGameObj[Amo_OBJ].transform.position);
 
     theta += deltaTime; // angolo da usare per vari calcoli
@@ -1024,7 +1058,7 @@ void updateScene(double deltaTime) {
                     allGameObj[pesci[j]].rotate(0, -90, 0); // il pesce viene messo in verticale
                     allGameObj[Amo_OBJ].setAcceleration(Vector3::K() * 4.0); // l'amo viene alzato come se venisse riavvolta la lenza
                     allGameObj[Splash_OBJ].place(allGameObj[Amo_OBJ].transform.position.xy().asVector3());
-                    allGameObj[Splash_OBJ].scale(0.3, 0.3, 0.3);
+                    allGameObj[Splash_OBJ].scale(0.3, 0.3, 1.0);
                     allGameObj[Splash_OBJ].show();
                     allTimers[pesci[j]].stop(); // viene stoppato il timer e riadibito all'utilizzo per 'pesce_hooked'
                     allTimers[pesci[j]].start(1.5);
@@ -1050,8 +1084,7 @@ void updateScene(double deltaTime) {
                 allGameObj[Amo_OBJ].setAcceleration(Vector3::Origin()); // l'amo si ferma
                 allGameObj[Amo_OBJ].setVelocity(Vector3::Origin()); // l'amo si ferma
                 allGameObj[Splash_OBJ].hide();
-                allGameObj[Splash_OBJ].place(0, 0, 0);
-                allGameObj[Splash_OBJ].reScale();
+                allGameObj[Splash_OBJ].resetTransform();
             } else allGameObj[Splash_OBJ].scale(1.1, 1.1, 0);
             // se l'amo si avvicina al secchio, che si trova al margine anteriore sinistro
             if (allGameObj[Amo_OBJ].transform.position.xy().distance(Vector2(-0.9 * xBound, 0.9 * yBound)) <= 0.3) {
@@ -1066,7 +1099,7 @@ void updateScene(double deltaTime) {
                 // TODO: aggiorna punteggio
                 pesci_attivi--;
                 pesce_interested = false;
-                game_score += pesci_punti[j];
+                game_score += pesci_punti[j] * ((stringMatch(pesci[j], pesce_bonus.c_str())) ? 2 : 1);
                 std::cout << "LOG: Ha abboccato " << pesci[j] << ", punti guadagnati: (" << ((pesci_punti[j] > 0) ? "+" : "") << pesci_punti[j] << "), punteggio: " << game_score << "\n";
             } else allGameObj[pesci[j]].place(allGameObj[Amo_OBJ].transform.position); // il pesce si muove con l'amo
             break;
@@ -1081,11 +1114,6 @@ void updateScene(double deltaTime) {
         }
     }
     if (!allTimers["spawnFish"].isCounting()) {
-        if (n_bonus % 4 == 0) {
-            // imposta il pesce bonus
-            std::cout << "Pesce Bonus: " + pesci[pesce_bonus];
-        }
-
         // se i pesci nel laghetto sono meno di 6
         if (pesci_attivi < 6) {
             // l'ordine permette di controllare il punteggio dato dai vari pesci
@@ -1100,6 +1128,14 @@ void updateScene(double deltaTime) {
             n_pesci++;
             pesci_attivi++;
             std::cout << "LOG: Spawned " << allGameObj[pesci[i]].getName() << " in (" << posizioni[p][0] << ", " << posizioni[p][1] << ") [" << n_pesci << "].\n";
+        }
+        if (n_bonus % 2 == 0) {
+            // imposta il pesce bonus
+            int i = 0, b = pesci_ord[n_pesci % MAX_Pesci - pesci_attivi + rand() % pesci_attivi];
+
+            for (; i < pesci[b].length() && isalpha(pesci[b].at(i)); i++);
+            pesce_bonus = pesci[b].substr(0, i);
+            std::cout << "Pesce Bonus: " + pesce_bonus + ".\n";
         }
         n_bonus++;
         allTimers["spawnFish"].start(); // il timer riparte
@@ -1153,10 +1189,11 @@ void renderScene() {
         once = false; // l'ordinamento va fatto solo una volta,
         orderedObjs = vector<string>(allGameObj.size());
         for (auto elem : allGameObj) {
+            bool underscore = false;
             id = -1;
             for (uint i = 0; i < elem.first.length(); i++) {
                 char c = elem.first.at(i);
-                if (c >= '0' && c <= '9') {
+                if (underscore && c >= '0' && c <= '9') {
                     // una sola cifra => id < 10
                     if (id == -1) id = c - '0'; 
                     else {
@@ -1164,7 +1201,7 @@ void renderScene() {
                         id *= 10;
                         id += c - '0';
                     }
-                }
+                } else if (!underscore && c == '_') underscore = true;
             }
             orderedObjs[id] = "";
             // l'ordinamento viene eseguito solo sulle stringhe dei nomi, così da non duplicare i dati
@@ -1258,6 +1295,10 @@ void processNormalKeys(unsigned char key, int x, int y) {
         case ' ':
             game_state = GameState::GameState_TitleScreen;
             CurrentState = menu_state::menu;
+            if (left_button) {
+                glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
+                left_button = false;
+            }
             if (difficulty == difficulty_level::easy)
                 UpdateScoreboard(score_easy);
             else if (difficulty == difficulty_level::medium)

@@ -18,7 +18,7 @@ private:
 	uint32_t r, g, b, a;
 
 public:
-	ColorRGBA();
+	ColorRGBA(); // =transparency, no color
 	ColorRGBA(float r, float g, float b, float a);
 	ColorRGBA(int r, int g, int b, int a);
 
@@ -44,15 +44,15 @@ public:
 	void Bind();
 	void UnBind();
 	
-	static ColorRGBA White();
-	static ColorRGBA Black();
-	static ColorRGBA Grey(float);
-	static ColorRGBA Red();
-	static ColorRGBA Green();
-	static ColorRGBA Blue();
-	static ColorRGBA Yellow();
-	static ColorRGBA Cyan();
-	static ColorRGBA Magenta();
+	static ColorRGBA White(); // rgba = 1,1,1,1
+	static ColorRGBA Red(); // rgba = 1,0,0,1
+	static ColorRGBA Green(); // rgba = 0,1,0,1
+	static ColorRGBA Blue(); // rgba = 0,0,1,1
+	static ColorRGBA Cyan(); // rgba = 0,1,1,1
+	static ColorRGBA Magenta(); // rgba = 1,0,1,1
+	static ColorRGBA Yellow(); // rgba = 1,1,0,1
+	static ColorRGBA Black(); // rgba = 0,0,0,1
+	static ColorRGBA Grey(float x); // rgba = x,x,x,1
 	
 };
 

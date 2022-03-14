@@ -139,8 +139,17 @@ const char* GameObj::getName(){
 }
 
 
-void GameObj::place(Vector3 p) { boundingBox.position.x = transform.position.x = p.x; boundingBox.position.y = transform.position.y = p.y; transform.position.z = p.z; }
-void GameObj::place(float x, float y, float z) { boundingBox.position.x = transform.position.x = x; boundingBox.position.y = transform.position.y = y; transform.position.z = z; }
+void GameObj::place(Vector3 p) { 
+	boundingBox.position.x = transform.position.x = p.x; 
+	boundingBox.position.y = transform.position.y = p.y; 
+	transform.position.z = p.z; 
+}
+
+void GameObj::place(float x, float y, float z) { 
+	boundingBox.position.x = transform.position.x = x; 
+	boundingBox.position.y = transform.position.y = y;
+	transform.position.z = z;
+}
 
 void GameObj::translate(Vector3 t){
 	transform.position.sum(t.x, t.y, t.z);
@@ -176,8 +185,12 @@ void GameObj::scale(float x, float y, float z) {
 	transform.scale.scale(x, y, z);
 }
 
-void GameObj::reScale() {
-	transform.scale.set(1, 1, 1);
+void GameObj::resetTransform() {
+	transform.scale.x = transform.scale.y = transform.scale.z = 1.0;
+	transform.rotation.x = transform.rotation.y = transform.rotation.z = 0.0;
+	transform.position.set(0, 0, 0);
+	transform.velocity.set(0, 0, 0);
+	transform.acceleration.set(0, 0, 0);
 }
 
 void GameObj::setVelocity(Vector3 v) { 
@@ -246,13 +259,11 @@ void GameObj::renderOpenGL() {
 			int faceIndex = face_n(i);
 			float c[4] = {0.0, 0.0, 0.0, 1.0};
 			
-			if (materials.find(faceIndex) != materials.end()) {
-				if (prev_faceIndex == -1 || materials[faceIndex] != materials[prev_faceIndex]) {
-					glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, materials[faceIndex].ambient.toFloat4(c));
-					glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, materials[faceIndex].diffuse.toFloat4(c));
-					glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, materials[faceIndex].specular.toFloat4(c));
-					glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, materials[faceIndex].emission.toFloat4(c));
-				}
+			if (materials.find(faceIndex) != materials.end() && (prev_faceIndex == -1 || materials[faceIndex] != materials[prev_faceIndex])) {
+				glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, materials[faceIndex].ambient.toFloat4(c));
+				glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, materials[faceIndex].diffuse.toFloat4(c));
+				glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, materials[faceIndex].specular.toFloat4(c));
+				glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, materials[faceIndex].emission.toFloat4(c));
 			}
 			glColor4fv(materials[faceIndex].diffuse.toFloat4(c));
 			if (has_texture) 

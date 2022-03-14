@@ -81,7 +81,7 @@ public:
 	void rotate(float x, float y, float z);
 	void scale(Vector3 s);
 	void scale(float x, float y, float z);
-	void reScale();
+	void resetTransform();
 	void setVelocity(Vector3 v);
 	void setAcceleration(Vector3 v);
 	void applyForce(Vector3 f);

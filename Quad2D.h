@@ -16,9 +16,16 @@ public:
 	Quad2D(double, double);
 	Quad2D(Vector2, double, double);
 
-	void applyText(std::string, ColorRGBA);
 	void applyColor(ColorRGBA);
 	void applyTexture(Texture);
+	void applyText(std::string, ColorRGBA);
 
-	//void drawOpenGL();
+	void drawOpenGL();
+
+	static void DrawQuad(double, double);
+	static void DrawQuad(Vector2 pos, double dx, double dy);
+	static void DrawQuad(Vector2 pos, double dx, double dy, Texture texture);
+	static void DrawQuad(Vector2 pos, double dx, double dy, std::string, ColorRGBA text, ColorRGBA background);
+	static void DrawQuad(Vector2 pos, double dx, double dy, std::string, ColorRGBA text, Texture texture);
+
 };

@@ -6,7 +6,7 @@ ColorRGBA::ColorRGBA(){
 	r = 0;
 	g = 0;
 	b = 0;
-	a = 255;
+	a = 0;
 }
 
 ColorRGBA::ColorRGBA(float r0, float g0, float b0, float a0) {
@@ -53,7 +53,7 @@ void ColorRGBA::set(int r0, int g0, int b0, int a0){
 	r = (r0 < 0) ? 0 : r0;
 	g = (g0 < 0) ? 0 : g0;
 	b = (b0 < 0) ? 0 : b0;
-	a = (a0 < 0) ? 0 : b0;
+	a = (a0 < 0) ? 0 : a0;
 }
 
 float* ColorRGBA::toFloat4(float c[4]) {
@@ -99,25 +99,6 @@ ColorRGBA ColorRGBA::Yellow() { return ColorRGBA(255, 255, 0, 255); }
 ColorRGBA ColorRGBA::Cyan() { return ColorRGBA(0, 255, 255, 255); }
 ColorRGBA ColorRGBA::Magenta() { return ColorRGBA(255, 0, 255, 255); }
 
-bool Texture::init() {
-	// Before calling ilInit() version should be checked.
-	if (ilGetInteger(IL_VERSION_NUM) < IL_VERSION)
-	{
-		ILint test = ilGetInteger(IL_VERSION_NUM);
-		/// wrong DevIL version ///
-		std::cout << "ERROR: Wrong DevIL version. Old devil.dll in system32/SysWow64?";
-		return false;
-	}
-
-	ilInit(); // Initialization of DevIL
-	ILenum devilError = ilGetError();
-	if (devilError != IL_NO_ERROR)
-		std::cout << "Devil Error: " << (unsigned char*)iluErrorString(devilError) << "\n";
-	IL_init = true; 
-	ilutRenderer(ILUT_OPENGL);
-	return true;
-}
-
 Texture::Texture() {
 	rendererID = -1;
 	imageID = 0;
@@ -126,7 +107,6 @@ Texture::Texture() {
 	height = width = 0;
 	pixels = nullptr;
 }
-
 /*
 Texture::Texture(std::string filename) {
 	rendererID = -1;
@@ -135,7 +115,8 @@ Texture::Texture(std::string filename) {
 	type = COLOR_TYPE::COLOR_RGBA;
 	height = width = 0;
 	pixels = nullptr;
-	path.assign(filename);
+	path = "";
+	path += filename;
 
 	stbi_set_flip_vertically_on_load(0);
 	pixels = stbi_load(filename.c_str(), &width, &height, &bpp, 4);
@@ -154,6 +135,25 @@ Texture::Texture(std::string filename) {
 }
 */
 
+bool Texture::init() {
+	// Before calling ilInit() version should be checked.
+	if (ilGetInteger(IL_VERSION_NUM) < IL_VERSION)
+	{
+		ILint test = ilGetInteger(IL_VERSION_NUM);
+		/// wrong DevIL version ///
+		std::cout << "ERROR: Wrong DevIL version. Old devil.dll in system32/SysWow64?";
+		return false;
+	}
+
+	ilInit(); // Initialization of DevIL
+	ILenum devilError = ilGetError();
+	if (devilError != IL_NO_ERROR)
+		std::cout << "Devil Error: " << (unsigned char*)iluErrorString(devilError) << "\n";
+	IL_init = true;
+	ilutRenderer(ILUT_OPENGL);
+	return true;
+}
+ 
 Texture::Texture(std::string filename) {
 	ILboolean success = false;
 	ILenum devilError;

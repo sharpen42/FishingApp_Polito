@@ -61,45 +61,77 @@ void Quad2D::applyColor(ColorRGBA c) {
 void Quad2D::applyTexture(Texture t) {
 	texture = t;
 }
-/*
+
 void Quad2D::drawOpenGL() {
     bool has_texture = (!texture.isEmpty());
+    float c[4];
+
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-    gluOrtho2D(0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), 0);
-
+    
     glPushAttrib(GL_CURRENT_BIT);
-    glColor3f(0.4, 0.4, 0.4);
-    if (has_texture) texture.Bind();
+    glColor4fv(bg_color.toFloat4(c));
+    if (has_texture) {
+        glEnable(GL_TEXTURE_2D);
+        texture.Bind();
+    }
     glBegin(GL_QUADS);
-    // TODO: binding texture
     if (has_texture) glTexCoord2f(0, 1);
     glVertex2f(position.x - dim_x, position.y - dim_y); //sx in basso
-    if (has_texture) glTexCoord2f(0, 0);
-    glVertex2f(position.x - dim_x, position.y + dim_y); //sx in alto
-    if (has_texture) glTexCoord2f(1, 0);
-    glVertex2f(position.x + dim_x, position.y + dim_y); //dx in alto
     if (has_texture) glTexCoord2f(1, 1);
     glVertex2f(position.x + dim_x, position.y - dim_y); //dx in basso
+    if (has_texture) glTexCoord2f(1, 0);
+    glVertex2f(position.x + dim_x, position.y + dim_y); //dx in alto
+    if (has_texture) glTexCoord2f(0, 0);
+    glVertex2f(position.x - dim_x, position.y + dim_y); //sx in alto
     glEnd();
-
+    if (has_texture) {
+        texture.UnBind();
+        glDisable(GL_TEXTURE_2D);
+    }
     glPopAttrib();
+
+    if (text != "") {
+        gluOrtho2D(0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), 0);
+        glPushAttrib(GL_CURRENT_BIT);
+        glColor4fv(text_color.toFloat4(c));
+
+        g_output(screen2pixels(position.x, glutGet(GLUT_WINDOW_WIDTH)) - glutBitmapLength(FONT, (const unsigned char*)text.c_str()) / 2,
+                 screen2pixels(-position.y, glutGet(GLUT_WINDOW_HEIGHT)) + 24,
+                 text);
+
+        glPopAttrib(); // This sets the colour back to its original value
+    }
     glPopMatrix();
-
-    glPushAttrib(GL_CURRENT_BIT);
-    glColor3f(0.0, 0.2, 0.4);
-
-    output(XRES / 2 - glutBitmapLength(FONT, (const unsigned char*) text.c_str()) / 2, 144, text);
-
-    glPopAttrib(); // This sets the colour back to its original value
-
-    glPushAttrib(GL_CURRENT_BIT);
-    glColor3f(0.0, 0.0, 1.0);
-
-    for (int i = 0; i < n_buttons; i++)
-        output(FromNormalizedToPixel(buttons[i].tx, 1), FromNormalizedToPixel(buttons[i].ty, -1), buttons[i].text);
-
-    glPopAttrib(); // This sets the colour back to its original value
 }
-*/
+
+void Quad2D::DrawQuad(double dx, double dy) {
+    Quad2D q = Quad2D(dx, dy);
+    q.drawOpenGL();
+}
+
+void Quad2D::DrawQuad(Vector2 v, double dx, double dy) {
+    Quad2D q = Quad2D(v, dx, dy);
+    q.drawOpenGL();
+}
+
+void Quad2D::DrawQuad(Vector2 v, double dx, double dy, Texture t) {
+    Quad2D q = Quad2D(v, dx, dy);
+    q.applyTexture(t);
+    q.drawOpenGL();
+}
+
+void Quad2D::DrawQuad(Vector2 v, double dx, double dy, std::string s, ColorRGBA tx, ColorRGBA bg) {
+    Quad2D q = Quad2D(v, dx, dy);
+    q.applyColor(bg);
+    q.applyText(s, tx);
+    q.drawOpenGL();
+}
+
+void Quad2D::DrawQuad(Vector2 v, double dx, double dy, std::string s, ColorRGBA tx, Texture bg) {
+    Quad2D q = Quad2D(v, dx, dy);
+    q.applyTexture(bg);
+    q.applyText(s, tx);
+    q.drawOpenGL();
+}
