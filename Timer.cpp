@@ -6,8 +6,7 @@ static int timer_n = 0;
 
 void defaultEnd(int n) { return; }
 
-Timer::Timer()
-{
+Timer::Timer() {
 	status = timer_state::timer_inactive;
 	count = 0.0;
 	match = 0.0;

@@ -4,9 +4,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cctype>
+#include <cmath>
 
 #include <GL/glut.h>
-//#include <irrKlang.h>
+#include <irrKlang.h>
 #include <Windows.h>
 
 #include "GameObj.h"
@@ -14,11 +15,12 @@
 #include "Timer.h"
 
 #define MAX_Pesci 9
-#define SEC_Duration 40
+#define SEC_Duration 100
 
 #define deg2rad(x) ((x) * (2 * PI) / 360.0)
 #define rad2deg(x) ((x) * 360.0 / (2 * PI))
-#define face_n(x) (((x) - ((x) % 3)) / 3)
+
+#define face_n(x) (((x) - ((x) % 9)) / 9)
 
 #define Canna_OBJ "Canna_0"
 #define Amo_OBJ "Amo_1"
@@ -27,7 +29,9 @@
 #define Mano_OBJ "Mano_4"
 #define Pugno_OBJ "Pugno_5"
 #define Splash_OBJ "Splash_17"
-#define Lago_OBJ "Laghetto_18"
+#define Lago_OBJ "Laghetto_19"
+
+typedef uint32_t uint;
 
 enum class GameState : unsigned int {
     GameState_TitleScreen, GameState_Play, GameState_SkillCheck, GameState_Pause, GameState_End
@@ -38,41 +42,31 @@ enum class read_state : unsigned int {
 };
 
 enum class pesce_state : unsigned int {
-    pesce_null, pesce_inactive, pesce_active, pesce_interest, pesce_hooked, pesce_scared
+    pesce_null, pesce_inactive, pesce_active, pesce_interest, pesce_hook, pesce_scare
 };
 
 enum class menu_state : unsigned int {
-    menu, play, setDifficulty, scoreboard
+    menu, play, setDifficulty, scoreboard, howToPlay
 }; // to define state of our game
 
 enum class difficulty_level : unsigned int {
     easy, medium, hard
 };
 
-typedef uint32_t uint;
-
-typedef struct button_t {
-    bool over; /* TRUE if polygon exists */
-    float xmin, xmax, ymin, ymax; /* bounding box */
-    std::string text;
-    float tx, ty;
-} Button;
-
 typedef struct {
     tm timestamp;
     int score;
 } Scoreboard;
 
-int n_buttons = 4, n_difficulty_buttons = 3, n_score = 5;
+const int n_buttons = 5, n_difficulty_buttons = 3, n_score = 5;
 
 menu_state CurrentState = menu_state::menu; // initiation global variable
 difficulty_level difficulty = difficulty_level::medium;
 
-Texture background;
+Texture background, back_button_tex[2];
 
-//Button ;
-Quad2D buttons[4], back, difficulty_buttons[3], score_buttons[5];
-Scoreboard score_easy[5], score_medium[5], score_hard[5];
+Quad2D buttons[n_buttons], back, difficulty_buttons[n_difficulty_buttons], score_buttons[n_score];
+Scoreboard score_easy[n_score], score_medium[n_score], score_hard[n_score];
 
 void* font = GLUT_BITMAP_TIMES_ROMAN_24;
 int XRES = 800;
@@ -90,7 +84,11 @@ float LightDiffuse[4];
 float LightPosition[4];
 float LightSpecular[4];
 
-//irrklang::ISoundEngine* soundEngine;
+int match_menu = 0;
+
+irrklang::ISoundEngine* soundEngine;
+
+Quad2D clickResponse = Quad2D(0.1, 0.1);
 
 bool left_button = false;
 bool skill_check_successful = false;
@@ -103,10 +101,12 @@ std::string skill_check_sequence;
 int sequence_length = 4;
 double skill_check_timer_count = 5000;
 
+unsigned int n = 0;
+std::string pesce_bonus = "Trota";
+
 GameState game_state = GameState::GameState_TitleScreen;
 int game_score = 0;
 int game_time = SEC_Duration;
-
 
 const std::string pesci[MAX_Pesci] = {
         "Trota0_6", "Trota1_7", "Trota2_8",
@@ -115,35 +115,66 @@ const std::string pesci[MAX_Pesci] = {
         "Luccio0_14"
 };
 
+// prototipi
 void changeSize(int w, int h);
+void resetScene();
 
+//*******************************//
+// imposta 4 valori in una volta
+//*******************************//
 void setFloat4(float v[4], float x0, float x1, float x2, float x3) {
     v[0] = x0; v[1] = x1; v[2] = x2; v[3] = x3;
 }
 
+//********************************************************************//
+// controlla se la stringa match e' contenuta nei primi caratteri di s
+//********************************************************************//
 bool stringMatch(string s, const char* match) {
     return (s.find(match, 0, strlen(match)) == 0);
 }
 
+//*****************//
+// riproduci suono
+//*****************//
 void playSound(std::string path) {
-    //soundEngine->play2D(path.c_str());
+    soundEngine->play2D(path.c_str());
     //PlaySound(LPCWSTR(path.c_str()), NULL, SND_ASYNC | SND_FILENAME);
-}
+} 
 
+//*************************//
+// riproduci suono in loop
+//*************************//
 void loopSound(std::string path) {
-    //soundEngine->play2D(path.c_str(), true);
+    // riproduci suono in loop
+    soundEngine->play2D(path.c_str(), true);
     //PlaySound(LPCWSTR(path.c_str()), NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
+} 
+
+//******************************//
+// metti in pausa tutti i suoni
+//******************************//
+void pauseSounds() {
+    soundEngine->setAllSoundsPaused(true);
 }
 
-tm FixMonth(tm ts, int flag) {
-    if (flag == 1)
-        ts.tm_mon -= 1;
-    else
-        ts.tm_mon += 1;
-
-    return ts;
+//******************************//
+// fai ripartire tutti i suoni
+//******************************//
+void unpauseSounds() {
+    soundEngine->setAllSoundsPaused(false);
 }
 
+//******************************//
+// rimuovi tutti i suoni
+//******************************//
+void stopSounds() {
+    soundEngine->stopAllSounds();
+}
+
+//*************//
+// flag = 1: x
+// flag =-1: y
+//*************//
 float FromPixelToNormalized(int pixel, int flag) {
     float f = pixel;
 
@@ -152,6 +183,10 @@ float FromPixelToNormalized(int pixel, int flag) {
     return -(f / (YRES / 2) - 1.0);
 }
 
+//*************//
+// flag = 1: x
+// flag =-1: y
+//*************//
 int FromNormalizedToPixel(float norm, int flag) {
     if (flag == 1)
         return (norm + 1) * XRES / 2;
@@ -169,17 +204,33 @@ std::string genRandom(const int len) {
     return tmp_s;
 }
 
-void output(int x, int y, std::string str) {
-    int len, i;
-
-    //glWindowPos2i(x + off_txt_x, y + off_txt_y);
-    glRasterPos2i(x, y);
-    len = str.length();
-
-    for (i = 0; i < len; i++)
-        glutBitmapCharacter(font, str[i]);
-
-    //glutPostRedisplay();
+void HandleMatch(int color) {
+    switch (color) {
+    case 1:
+        if (game_state != GameState::GameState_Pause) {
+            // Pause match
+            std::cout << "Match paused!\n";
+            game_state = GameState::GameState_Pause;
+            glutChangeToMenuEntry(1, "Resume", 1);
+            pauseSounds();
+        } else {
+            // Resume match
+            std::cout << "Match resumed!\n";
+            game_state = GameState::GameState_Play;
+            glutChangeToMenuEntry(1, "Pause", 1);
+            unpauseSounds();
+        }
+        break;
+    case 2:
+        // Return to main menu and reset match
+        std::cout << "Match quitted!\n";
+        game_state = GameState::GameState_TitleScreen;
+        CurrentState = menu_state::menu;
+        glutDetachMenu(GLUT_RIGHT_BUTTON);
+        resetScene();
+        loopSound(".\\sounds\\menu_background.wav");
+        break;
+    }
 }
 
 void InitMenu() {
@@ -192,8 +243,11 @@ void InitMenu() {
     buttons[2] = Quad2D(Vector2(0,-0.2), 0.8, 0.1);
     buttons[2].applyText("Scoreboard", ColorRGBA::White());
 
-    buttons[3] = Quad2D(Vector2(0,-0.8), 0.8, 0.1);
-    buttons[3].applyText("Quit", ColorRGBA::White());
+    buttons[3] = Quad2D(Vector2(0, -0.4), 0.8, 0.1);
+    buttons[3].applyText("How to Play", ColorRGBA::White());
+
+    buttons[4] = Quad2D(Vector2(0,-0.8), 0.8, 0.1);
+    buttons[4].applyText("Quit", ColorRGBA::White());
 
     difficulty_buttons[0] = Quad2D(Vector2(0, 0.20), 0.8, 0.1);
     difficulty_buttons[0].applyText("Easy", ColorRGBA::White());
@@ -204,8 +258,8 @@ void InitMenu() {
     difficulty_buttons[2] = Quad2D(Vector2(0, -0.20), 0.8, 0.1);
     difficulty_buttons[2].applyText("Hard", ColorRGBA::White());
 
-    back = Quad2D(Vector2(0.8, 0.8), 0.1, 0.1 * XRES / YRES);
-    back.applyTexture(Texture(".\\models\\textures\\back_button_2.png"));
+    back = Quad2D(Vector2(0.9, 0.9), 0.1, 0.1 * XRES / YRES);
+    //back.applyTexture(Texture(".\\models\\textures\\back_button_2.png"));
 
     score_buttons[0] = Quad2D(Vector2(0, 0.2), 0.2, 0.1);
     score_buttons[0].applyColor(ColorRGBA::Grey(0.2));
@@ -254,10 +308,7 @@ void InitMenu() {
     buttons[3].text = "Quit";
     buttons[3].tx = FromPixelToNormalized(XRES / 2 - glutBitmapLength(font, (const unsigned char*)"Quit") / 2, 1);
     buttons[3].ty = FromPixelToNormalized(YRES - 68, -1);
-    */
-
-
-    /*
+    
     difficulty_buttons[0].xmin = -0.4;
     difficulty_buttons[0].xmax = 0.4;
     difficulty_buttons[0].ymin = 0.15;
@@ -331,7 +382,7 @@ void ReadFile(const char* filename, difficulty_level difficulty) {
     fopen_s(&score_file, filename, "r");
 
     for (int i = 0; fscanf_s(score_file, "%d/%d/%d %d:%d:%d %d", &(sb.timestamp.tm_year), &(sb.timestamp.tm_mon), &(sb.timestamp.tm_mday), &(sb.timestamp.tm_hour), &(sb.timestamp.tm_min), &(sb.timestamp.tm_sec), &(sb.score)) != EOF; i++) {
-        sb.timestamp = FixMonth(sb.timestamp, 1);
+        //sb.timestamp = FixMonth(sb.timestamp, 1);
 
         if (difficulty == difficulty_level::easy)
             score_easy[i] = sb;
@@ -359,7 +410,7 @@ void WriteFile(const char* filename, difficulty_level difficulty) {
         else if (difficulty == difficulty_level::hard)
             sb = score_hard[i];
 
-        sb.timestamp = FixMonth(sb.timestamp, -1);
+        //sb.timestamp = FixMonth(sb.timestamp, -1);
         fprintf(score_file, "%04d/%02d/%02d %02d:%02d:%02d %d\n", sb.timestamp.tm_year, sb.timestamp.tm_mon, sb.timestamp.tm_mday, sb.timestamp.tm_hour, sb.timestamp.tm_min, sb.timestamp.tm_sec, sb.score);
     }
 
@@ -411,29 +462,75 @@ void PickButton(int x, int y) {
                 back.mouseOver(true);
             else back.mouseOver(false);
             break;
+        case menu_state::howToPlay:
+            if (ox >= back.position.x - back.dim_x && ox <= back.position.x + back.dim_x &&
+                oy >= back.position.y - back.dim_y && oy <= back.position.y + back.dim_y)
+                back.mouseOver(true);
+            else back.mouseOver(false);
+            break;
         default:
             break;
         }
     }
 }
 
+bool UpdateScoreboard(Scoreboard* records) {
+    const time_t now = time(0);
+    tm ltm;
+    localtime_s(&ltm, &now);
+
+    tm ts;
+    ts.tm_year = 1900 + ltm.tm_year;
+    ts.tm_mon = 1 + ltm.tm_mon;
+    ts.tm_mday = ltm.tm_mday;
+    ts.tm_hour = ltm.tm_hour;
+    ts.tm_min = ltm.tm_min;
+    ts.tm_sec = ltm.tm_sec;
+
+    for (int i = 0; i < n_score; i++) {
+        if (game_score >= records[i].score) {
+            for (int j = n_score - 1; j >= i; j--)
+                records[j] = records[j - 1];
+
+            records[i].score = game_score;
+            records[i].timestamp = ts;
+            return true;
+        }
+    }
+    return false;
+}
+
 void stopGameTimer(int a) {
-    static uint seconds = 0;
-    seconds++;
     game_time--;
-    if (seconds < SEC_Duration) {
-        if (SEC_Duration - seconds == 10) playSound(".\\sounds\\clock_1.wav");
-        if (SEC_Duration - seconds == 9) playSound(".\\sounds\\clock_2.wav");
-        if (SEC_Duration - seconds == 8) playSound(".\\sounds\\clock_3.wav");
-        if (SEC_Duration - seconds == 7) playSound(".\\sounds\\clock_4.wav");
-        if (SEC_Duration - seconds == 1) playSound(".\\sounds\\wishtle.wav");
-        std::cout << "LOG: " << seconds << " second passed.\n";
+    if (game_time > 0) {
+        if (game_time <= 10 && game_time >= 6) {
+            (game_time % 2 == 0) ? playSound(".\\sounds\\clock_3.wav") : playSound(".\\sounds\\clock_4.wav");
+        } if (game_time <= 5 && game_time >= 2) {
+            (game_time % 2 == 0) ? playSound(".\\sounds\\clock_1.wav") : playSound(".\\sounds\\clock_2.wav");
+        }
+        if (game_time < 3) playSound(".\\sounds\\whistle.wav");
         allTimers["gameTimer"].start();
     } else {
-        playSound(".\\sounds\\wishtle.wav");
+        allTimers["skillCheck"].stop();
+        allTimers["displaySkillCheck"].stop();
+        stopSounds();
+        playSound(".\\sounds\\whistle.wav");
+        if(game_score < 100) loopSound(".\\sounds\\clap_small.wav");
+        else loopSound(".\\sounds\\clap_big.wav");
         std::cout << "LOG: Match ended after " << std::to_string(SEC_Duration) << " sec!" << endl;
         std::cout << "LOG: score = " << game_score << endl;
+        if (left_button) {
+            glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
+            left_button = false;
+        }
+        if (difficulty == difficulty_level::easy)
+            UpdateScoreboard(score_easy);
+        else if (difficulty == difficulty_level::medium)
+            UpdateScoreboard(score_medium);
+        else
+            UpdateScoreboard(score_hard);
         game_state = GameState::GameState_End;
+        glutDetachMenu(GLUT_RIGHT_BUTTON);
     }
 }
 
@@ -458,6 +555,11 @@ void myMouse(int button, int state, int x, int y) {
                 switch (pressed) {
                 case 0:
                     CurrentState = menu_state::play;
+                    //game_state = GameState::GameState_Play;
+                    glutAttachMenu(GLUT_RIGHT_BUTTON);
+                    stopSounds();
+                    playSound(".\\sounds\\game_start.wav");
+                    loopSound(".\\sounds\\game_background.wav");
                     break;
                 case 1:
                     CurrentState = menu_state::setDifficulty;
@@ -466,6 +568,9 @@ void myMouse(int button, int state, int x, int y) {
                     CurrentState = menu_state::scoreboard;
                     break;
                 case 3:
+                    CurrentState = menu_state::howToPlay;
+                    break;
+                case 4:
                     PrintScoreboard();
                     exit(0);
                     break;
@@ -475,15 +580,12 @@ void myMouse(int button, int state, int x, int y) {
                 break;
             case menu_state::setDifficulty:
                 for (int i = 0; i < n_difficulty_buttons; i++) {
-                    //if ((ox >= difficulty_buttons[i].xmin) && (ox <= difficulty_buttons[i].xmax) && (oy >= difficulty_buttons[i].ymin) && (oy <= difficulty_buttons[i].ymax))
                     if (difficulty_buttons[i].isOver())
                         pressed = i;
                 }
 
-                //if ((ox >= back.xmin) && (ox <= back.xmax) && (oy >= back.ymin) && (oy <= back.ymax))
                 if(back.isOver())
                     pressed = -2;
-
                 if (pressed == -1)
                     return;
 
@@ -509,8 +611,13 @@ void myMouse(int button, int state, int x, int y) {
                 CurrentState = menu_state::menu;
                 break;
             case menu_state::scoreboard:
-                //if ((ox >= back.xmin) && (ox <= back.xmax) && (oy >= back.ymin) && (oy <= back.ymax))
                 if(back.isOver())
+                    pressed = -2;
+                if (pressed == -2)
+                    CurrentState = menu_state::menu;
+                break;
+            case menu_state::howToPlay:
+                if (back.isOver())
                     pressed = -2;
                 if (pressed == -2)
                     CurrentState = menu_state::menu;
@@ -523,13 +630,12 @@ void myMouse(int button, int state, int x, int y) {
 }
 
 void Menu() {
-    static Texture tex = Texture(".\\models\\textures\\logo_tutorial.png");
-
+    static Texture tex = Texture(".\\models\\textures\\logo_main.png");
+   
     Quad2D::DrawQuad(Vector2(), 2, 2, background);
-    //Quad2D::DrawQuad(Vector2(-0.7, 0.3), 0.4, 0.4, "provaprovaprova", ColorRGBA::Yellow(), tex);
-    //Quad2D::DrawQuad(Vector2(0.7, 0.5), 0.7, 0.2, "provaprovaprova", ColorRGBA::Yellow(), ColorRGBA());
-
     Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * XRES / YRES, tex);
+    //Quad2D::DrawQuad(Vector2(), 2, 2, ColorRGBA(0xE6, 0x99, 0xC0, 0x34)); // color: 0xE699C0
+
     for (int i = 0; i < n_buttons; i++) {
         Quad2D::DrawQuad(buttons[i].position, buttons[i].dim_x * 2 + 0.01, buttons[i].dim_y * 2 + 0.01, ColorRGBA(0.8f, 0.8f, 0.2f, 1.0f));
         if (buttons[i].isOver()) buttons[i].applyColor(ColorRGBA::Grey(0.4)); // TODO
@@ -576,8 +682,12 @@ void Menu() {
 }
 
 void SetDifficulty() {
-    Quad2D::DrawQuad(Vector2(), 2, 2, background);
+    static Texture tex = Texture(".\\models\\textures\\logo_difficulty.png");
 
+    Quad2D::DrawQuad(Vector2(), 2, 2, background);
+    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * XRES / YRES, tex);
+
+    back.applyTexture(back_button_tex[(back.isOver()) ? 1 : 0]);
     back.dim_y = back.dim_x * XRES / YRES;
     back.drawOpenGL();
     for (int i = 0; i < n_difficulty_buttons; i++) {
@@ -662,24 +772,27 @@ void SetDifficulty() {
 }
 
 void ScoreBoard() {
+    static Texture tex = Texture(".\\models\\textures\\logo_scoreboard.png");
     std::string str;
     char buffer[50];
     tm ts;
 
     Quad2D::DrawQuad(Vector2(), 2, 2, background);
+    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * XRES / YRES, tex);
 
+    back.applyTexture(back_button_tex[(back.isOver()) ? 1 : 0]);
     back.dim_y = back.dim_x * XRES / YRES;
     back.drawOpenGL();
-    Quad2D::DrawQuad(Vector2(0, 0.6), 0.61, 0.11, ColorRGBA::Grey(0.2));
+    Quad2D::DrawQuad(Vector2(0, 0.35), 0.61, 0.11, ColorRGBA::Grey(0.2));
     switch (difficulty) {
     case difficulty_level::easy:
-        Quad2D::DrawQuad(Vector2(0, 0.6), 0.6, 0.1, "ScoreBoard: Easy", ColorRGBA::White(), ColorRGBA(0.2f, 0.6f, 0.1f, 1.0f));
+        Quad2D::DrawQuad(Vector2(0, 0.35), 0.6, 0.1, "ScoreBoard: Easy", ColorRGBA::White(), ColorRGBA(0.2f, 0.6f, 0.1f, 1.0f));
         break;
     case difficulty_level::medium:
-        Quad2D::DrawQuad(Vector2(0, 0.6), 0.6, 0.1, "ScoreBoard: Medium", ColorRGBA::White(), ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
+        Quad2D::DrawQuad(Vector2(0, 0.35), 0.6, 0.1, "ScoreBoard: Medium", ColorRGBA::White(), ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
         break;
     case difficulty_level::hard:
-        Quad2D::DrawQuad(Vector2(0, 0.6), 0.6, 0.1, "ScoreBoard: Hard", ColorRGBA::White(), ColorRGBA(0.6f, 0.2f, 0.1f, 1.0f));
+        Quad2D::DrawQuad(Vector2(0, 0.35), 0.6, 0.1, "ScoreBoard: Hard", ColorRGBA::White(), ColorRGBA(0.6f, 0.2f, 0.1f, 1.0f));
         break;
     default:break;
     }
@@ -688,15 +801,18 @@ void ScoreBoard() {
         switch (difficulty) {
         case difficulty_level::easy:
             str = std::to_string(score_easy[i].score);
-            ts = FixMonth(score_easy[i].timestamp, -1);
+            //ts = FixMonth(score_easy[i].timestamp, -1);
+            ts = score_easy[i].timestamp;
             break;
         case difficulty_level::medium:
-            str = std::to_string(score_easy[i].score);
-            ts = FixMonth(score_easy[i].timestamp, -1);
+            str = std::to_string(score_medium[i].score);
+            //ts = FixMonth(score_medium[i].timestamp, -1);
+            ts = score_medium[i].timestamp;
             break;
         case difficulty_level::hard:
-            str = std::to_string(score_easy[i].score);
-            ts = FixMonth(score_easy[i].timestamp, -1);
+            str = std::to_string(score_hard[i].score);
+            //ts = FixMonth(score_hard[i].timestamp, -1);
+            ts = score_hard[i].timestamp;
             break;
         default:break;
         }
@@ -788,6 +904,38 @@ void ScoreBoard() {
     */
 }
 
+void HowToPlay() {
+    static Texture htp = Texture(".\\models\\textures\\tutorial.png");
+    static Texture tex = Texture(".\\models\\textures\\logo_tutorial.png");
+
+    Quad2D::DrawQuad(Vector2(), 2, 2, background);
+
+    back.applyTexture(back_button_tex[(back.isOver()) ? 1 : 0]);
+    back.dim_y = back.dim_x * XRES / YRES;
+    back.drawOpenGL();
+    Quad2D::DrawQuad(Vector2(0, -0.3), 1.5, 1.2, htp);
+    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * XRES / YRES, tex);
+}
+
+void mouseClick(double deltaTime) {
+    static ColorRGBA w = ColorRGBA::White();
+    static float alpha = 0.6f;
+
+    if (left_button) {
+        alpha = 0.6f;
+        clickResponse.dim_x = 0.01;
+        clickResponse.dim_y = 0.01;
+    }
+    alpha -= deltaTime * 2.5;
+    if (alpha > 0.0) {
+        clickResponse.dim_x += deltaTime * 0.5;
+        clickResponse.dim_y += deltaTime * 0.5;
+        w.setAlpha(alpha);
+    }
+    else w.setAlpha(0);
+    clickResponse.applyColor(w);
+}
+
 bool init(string path) {
     ColorRGBA nullColor = ColorRGBA(0, 0, 0, 0);
     map<string, Material> allMats;
@@ -803,7 +951,7 @@ bool init(string path) {
     uint v1, v2, v3;
     uint n1, n2, n3;
     uint uv1, uv2, uv3;
-    uint start = 0;
+    uint start_v = 0, start_uv = 0, start_n = 0;
     read_state read_status = read_state::read_start;
 
 
@@ -883,8 +1031,15 @@ bool init(string path) {
             if (read_status != read_state::read_vertices) {
                 read_status = read_state::read_vertices;
                 allGameObj[name].addMesh(Mesh());
-                if (allVertices.size() == 0) start = 1;
-                else start = allVertices.size();
+                if (allVertices.size() == 0) {
+                    start_v = 1;
+                    start_uv = 1;
+                    start_n = 1;
+                } else {
+                    start_v = allVertices.size();
+                    start_uv = allUVs.size();
+                    start_n = allNormals.size();
+                }
             }
             sscanf_s(newLine.c_str(), "v %f %f %f\n", &x, &y, &z);
             allVertices.push_back(Vector3(x, y, z));
@@ -908,36 +1063,45 @@ bool init(string path) {
             allGameObj[name].materials[face_n(temp_face.size())] = allMats[mat];
             if (allTextures.find(mat) != allTextures.end() && allGameObj[name].texture.isEmpty()) 
                 allGameObj[name].addTexture(allTextures[mat]);
-            temp_face.push_back(v1 - start);
-            if (temp_vert.size() <= v1 - start)
-                temp_vert.resize(v1 - start + 1);
-            temp_vert[v1 - start] = allVertices[v1 - 1];
-            if (temp_norm.size() <= v1 - start)
-                temp_norm.resize(v1 - start + 1);
-            temp_norm[v1 - start] = allNormals[n1 - 1];
-            if (temp_uv.size() <= v1 - start)
-                temp_uv.resize(v1 - start + 1);
-            temp_uv[v1 - start] = allUVs[uv1 - 1];
-            temp_face.push_back(v2 - start);
-            if (temp_vert.size() <= v2 - start)
-                temp_vert.resize(v2 - start + 1);
-            temp_vert[v2 - start] = allVertices[v2 - 1];
-            if (temp_norm.size() <= v2 - start)
-                temp_norm.resize(v2 - start + 1);
-            temp_norm[v2 - start] = allNormals[n2 - 1];
-            if (temp_uv.size() <= v2 - start)
-                temp_uv.resize(v2 - start + 1);
-            temp_uv[v2 - start] = allUVs[uv2 - 1];
-            temp_face.push_back(v3 - start);
-            if (temp_vert.size() <= v3 - start)
-                temp_vert.resize(v3 - start + 1);
-            temp_vert[v3 - start] = allVertices[v3 - 1];
-            if (temp_norm.size() <= v3 - start)
-                temp_norm.resize(v3 - start + 1);
-            temp_norm[v3 - start] = allNormals[n3 - 1];
-            if (temp_uv.size() <= v3 - start)
-                temp_uv.resize(v3 - start + 1);
-            temp_uv[v3 - start] = allUVs[uv3 - 1];
+
+            temp_face.push_back(v1 - start_v);
+            temp_face.push_back(uv1 - start_uv);
+            temp_face.push_back(n1 - start_n);
+            if (temp_vert.size() <= v1 - start_v)
+                temp_vert.resize(v1 - start_v + 1);
+            temp_vert[v1 - start_v].set(allVertices[v1 - 1]);
+            if (temp_norm.size() <= n1 - start_n)
+                temp_norm.resize(n1 - start_n + 1);
+            temp_norm[n1 - start_n].set(allNormals[n1 - 1]);
+            if (temp_uv.size() <= uv1 - start_uv)
+                temp_uv.resize(uv1 - start_uv + 1);
+            temp_uv[uv1 - start_uv].set(allUVs[uv1 - 1]);
+
+            temp_face.push_back(v2 - start_v);
+            temp_face.push_back(uv2 - start_uv);
+            temp_face.push_back(n2 - start_n);
+            if (temp_vert.size() <= v2 - start_v)
+                temp_vert.resize(v2 - start_v + 1);
+            temp_vert[v2 - start_v].set(allVertices[v2 - 1]);
+            if (temp_norm.size() <= n2 - start_n)
+                temp_norm.resize(n2 - start_n + 1);
+            temp_norm[n2 - start_n].set(allNormals[n2 - 1]);
+            if (temp_uv.size() <= uv2 - start_uv)
+                temp_uv.resize(uv2 - start_uv + 1);
+            temp_uv[uv2 - start_uv].set(allUVs[uv2 - 1]);
+
+            temp_face.push_back(v3 - start_v);
+            temp_face.push_back(uv3 - start_uv);
+            temp_face.push_back(n3 - start_n);
+            if (temp_vert.size() <= v3 - start_v)
+                temp_vert.resize(v3 - start_v + 1);
+            temp_vert[v3 - start_v].set(allVertices[v3 - 1]);
+            if (temp_norm.size() <= n3 - start_n)
+                temp_norm.resize(n3 - start_n + 1);
+            temp_norm[n3 - start_n].set(allNormals[n3 - 1]);
+            if (temp_uv.size() <= uv3 - start_uv)
+                temp_uv.resize(uv3 - start_uv + 1);
+            temp_uv[uv3 - start_uv].set(allUVs[uv3 - 1]);
         } else if (stringMatch(newLine, "l ")) {
             if (read_status != read_state::read_lines) {
                 read_status = read_state::read_lines;
@@ -945,13 +1109,12 @@ bool init(string path) {
                 temp_line.clear();
             }
             sscanf_s(newLine.c_str(), "l %u %u\n", &v1, &v2);
-            temp_line.push_back(v1 - start);
-            if (temp_vert.size() <= v1 - start) temp_vert.resize(v1 - start + 1);
-            temp_vert[v1 - start] = allVertices[v1 - 1];
-            temp_line.push_back(v2 - start);
-            if (temp_vert.size() <= v2 - start) temp_vert.resize(v2 - start + 1);
-            temp_vert[v2 - start] = allVertices[v2 - 1];
-            std::cout << "LOG: Curve '" << name << "': point [" << (v1 - start) << "]( z = " << temp_vert[v1 - start].z << ") -> [" << (v2 - start) << "]( z = " << temp_vert[v2 - start].z << ")\n";
+            temp_line.push_back(v1 - start_v);
+            if (temp_vert.size() <= v1 - start_v) temp_vert.resize(v1 - start_v + 1);
+            temp_vert[v1 - start_v] = allVertices[v1 - 1];
+            temp_line.push_back(v2 - start_v);
+            if (temp_vert.size() <= v2 - start_v) temp_vert.resize(v2 - start_v + 1);
+            temp_vert[v2 - start_v] = allVertices[v2 - 1];
         } else if (stringMatch(newLine, "usemtl ")) {
             mat = "" + newLine.substr(7, newLine.length() - 7);
             std::cout << "LOG: '" << mat << "' material found.\n";
@@ -969,38 +1132,45 @@ bool init(string path) {
 }
 
 void prepareScene() {
-    const double pesci_bound[MAX_Pesci] = { 0.4, 0.4, 0.4, 0.25, 0.25, 0.25, 0.4, 0.4, 0.6 };
+    const double pesci_bound[MAX_Pesci] = { 0.1, 0.1, 0.1, 0.05, 0.05, 0.05, 0.15, 0.15, 0.2 };
     const double SCALE = 1.0;
 
     game_state = GameState::GameState_TitleScreen;
     game_score = 0;
     background = Texture(".\\models\\textures\\render_sfondo.png");
+    back_button_tex[0] = Texture(".\\models\\textures\\back_button.png");
+    back_button_tex[1] = Texture(".\\models\\textures\\back_button_2.png");
 
     allGameObj[Splash_OBJ].hide();
     allGameObj[Pugno_OBJ].hide();
-    allGameObj[Amo_OBJ].setBoundingBox2D(SCALE * 0.05, SCALE * 0.05);
+    allGameObj[Amo_OBJ].setBoundingSphere2D(SCALE * 0.1);
     for (int i = 0; i < 9; i++) {
         allGameObj[pesci[i]].hide();
-        allGameObj[pesci[i]].setBoundingBox2D(SCALE * pesci_bound[i], SCALE * pesci_bound[i]);
+        allGameObj[pesci[i]].setBoundingSphere2D(SCALE * pesci_bound[i]);
         allGameObj[pesci[i]].setState((int)pesce_state::pesce_inactive);
         allTimers[pesci[i]] = Timer();
     }
-    //allGameObj[Lago_OBJ].setBoundingBox2D(0.8 * xBound, 0.8 * yBound);
-    //allGameObj[Lago_OBJ].boundingBox.setOutside();
 
-    setFloat4(LightAmbient, 0.5f, 0.5f, 0.5f, 1.0f);
+    setFloat4(LightAmbient, 0.1f, 0.1f, 0.1f, 0.2f);
     setFloat4(LightDiffuse, 1.0f, 1.0f, 1.0f, 1.0f);
-    setFloat4(LightPosition, 0.0f, 0.0f, 15.0f, 1.0f);
-    setFloat4(LightSpecular, 0.1f, 0.1f, 0.1f, 0.5f);
+    setFloat4(LightSpecular, 0.0f, 0.0f, 0.0f, 1.0f);
+    setFloat4(LightPosition, 0.0f, 0.0f, 5.0f, 1.0f);
 
+    clickResponse.applyTexture(Texture(".\\models\\textures\\click.png"));
+
+    allTimers["click"] = Timer(0.4);
     allTimers["spawnFish"] = Timer(5.0);
     allTimers["gameTimer"] = Timer(1.0);
-    allTimers["skillCheck"] = Timer(8.0);
-
+    allTimers["skillCheck"] = Timer(4.0);
+    allTimers["displaySkillCheck"] = Timer(0.5);
+    
+    loopSound(".\\sounds\\menu_background.wav");
     MainCamera.lookAt(Vector3(-5.0, 0.0, 4.0), Vector3(0.0, 0.0, 0.0), Vector3(0.5, 0.0, 0.5));
-}
 
-//void resetScene(){}
+    match_menu = glutCreateMenu(HandleMatch);
+    glutAddMenuEntry("Pause", 1);
+    glutAddMenuEntry("Exit match", 2);
+}
 
 void prepareOpenGL() {    
     glEnable(GL_BLEND);
@@ -1012,30 +1182,57 @@ void prepareOpenGL() {
     glEnable(GL_DEPTH_TEST);		// Enables Depth Testing
     glDepthFunc(GL_LEQUAL);			// The Type Of Depth Test To Do
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculation
-    /*
+    
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);    // Uses default lighting parameters
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     glEnable(GL_LIGHT0);
-    */
+    
     glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
     glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
-    glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
+    //glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
     glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
     glEnable(GL_LIGHT1);
     
     glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE); 
 }
 
-void repaint(void) {
+void repaint() {
     /* Show skill check */
+    static std::string str = "";
+    static Texture letter_W = Texture(".\\models\\textures\\w.png");
+    static Texture letter_A = Texture(".\\models\\textures\\a.png");
+    static Texture letter_S = Texture(".\\models\\textures\\s.png");
+    static Texture letter_D = Texture(".\\models\\textures\\d.png");
+    static Texture wrong = Texture(".\\models\\textures\\x.png");
+    static Texture correct = Texture(".\\models\\textures\\check.png");
+
     if (check_sequence_generation == false) {
         srand(time(NULL));
         skill_check_sequence = genRandom(sequence_length);
         check_sequence_generation = true;
-        cout << "LOG: Sequenza generata: " << skill_check_sequence << endl;
+        //cout << "LOG: Sequenza generata: " << skill_check_sequence << endl;
+        str = "";
     }
-
+    if (game_time <= 0) return;
+    for (int i = 0; i < sequence_length; i++) {
+        Texture letter;
+        if (skill_check_failed) {
+            letter = wrong;
+        } else if (i < n) {
+            letter = correct;
+        } else {
+            switch (skill_check_sequence.at(i)) {
+            case 'w': letter = letter_W; break;
+            case 'a': letter = letter_A; break;
+            case 's': letter = letter_S; break;
+            case 'd': letter = letter_D; break;
+            default: break;
+            }
+        }
+        Quad2D::DrawQuad(Vector2(((double)i - sequence_length / 2) * 0.3 + 0.15, 0.0), 0.3, 0.3 * XRES / YRES, letter);
+    }
+    /*
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -1059,11 +1256,32 @@ void repaint(void) {
 
     glPopAttrib();
     glPopMatrix();
+    */
 }
 
 void printScore() {
-    //string score_str = "Score: " + std::to_string(game_score);
+    static Texture cloud = Texture(".\\models\\textures\\cloud.png");
+    static map<std::string, Texture> pesci;
+    static bool once = true;
 
+    if (once) {
+        pesci["Trota"] = Texture(".\\models\\textures\\thumbnail_Trota.png");
+        pesci["Persico"] = Texture(".\\models\\textures\\thumbnail_Persico.png");
+        pesci["Carpa"] = Texture(".\\models\\textures\\thumbnail_Carpa.png");
+        pesci["Luccio"] = Texture(".\\models\\textures\\thumbnail_Luccio.png");
+        once = false;
+    }
+
+    Quad2D::DrawQuad(Vector2(0.0, 0.9), 0.5, 0.4 * XRES / YRES, cloud);
+    Quad2D::DrawQuad(Vector2(0.0, 0.9), 0.4, 0.15 * XRES / YRES, pesci[pesce_bonus]);
+    Quad2D::DrawQuad(Vector2(0.0, 0.78), 0.3, 0.1, "Bonus x2", ColorRGBA(0.4f, 0.4f, 0.1f, 1.0f), ColorRGBA());
+    Quad2D::DrawQuad(Vector2(-0.8, 0.9), 0.26, 0.11, ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
+    Quad2D::DrawQuad(Vector2(-0.8, 0.9), 0.25, 0.1, "Score: " + std::to_string(game_score), ColorRGBA::White(), ColorRGBA::Grey(0.2));
+    Quad2D::DrawQuad(Vector2( 0.8, 0.9), 0.26, 0.11, ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
+    Quad2D::DrawQuad(Vector2( 0.8, 0.9), 0.25, 0.1, "Time: " + std::to_string(game_time), ColorRGBA::White(), ColorRGBA::Grey(0.2));
+    Quad2D::DrawQuad(Vector2(0.8, 0.9), 0.26, 0.11, ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
+    Quad2D::DrawQuad(Vector2(0.8, 0.9), 0.25, 0.1, "Time: " + std::to_string(game_time), ColorRGBA::White(), ColorRGBA::Grey(0.2));
+    /*
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -1076,35 +1294,50 @@ void printScore() {
 
     glPopAttrib(); // This sets the colour back to its original value
     glPopMatrix();
+    */
 }
 
 void updateScene(double deltaTime) {
-    static const double pesci_depth[MAX_Pesci] = { -0.4, -0.4, -0.4, -0.2, -0.2, -0.2, -0.6, -0.6, -0.8 };
+    static const double pesci_bound[MAX_Pesci] = { 0.2, 0.2, 0.2, 0.15, 0.15, 0.15, 0.3, 0.3, 0.5 };
+    static const double pesci_depth[MAX_Pesci] = { -0.2, -0.2, -0.2, -0.1, -0.1, -0.1, -0.3, -0.3, -0.4 };
     static const double pesci_speed[MAX_Pesci] = { 0.3, 0.3, 0.3, 0.5, 0.5, 0.5, 0.3, 0.3, 0.1 };
     static const int pesci_punti[MAX_Pesci] = { 10, 10, 10, -5, -5, -5, 20, 20, 50 };
-    static uint pesci_ord[MAX_Pesci] = { 0, 3, 6, 1, 8, 4, 2, 7, 5 };
+    static const uint pesci_ord[MAX_Pesci] = { 0, 3, 6, 1, 8, 4, 2, 7, 5 };
+    static const double posizioni[6][2] = {
+        {-0.3 * xBound, 0.3 * yBound}, {0, 0.3 * yBound}, {0.3 * xBound, 0.3 * yBound},
+        {-0.3 * xBound,-0.3 * yBound}, {0,-0.3 * yBound}, {0.3 * xBound,-0.3 * yBound}
+    };
     static Vector3 floater = Vector3();
     static uint n_pesci = 0;
     static uint pesci_attivi = 0;
     static double theta = 0.0;
     static bool pesce_interested = false; // indica se un pesce è attaccato alla lenza
-    static const double posizioni[6][2] = {
-        {-0.3 * xBound, 0.3 * yBound}, {0, 0.3 * yBound}, {0.3 * xBound, 0.3 * yBound},
-        {-0.3 * xBound,-0.3 * yBound}, {0,-0.3 * yBound}, {0.3 * xBound,-0.3 * yBound}
-    };
+    static bool pesce_hooked = false;
     static int n_bonus = 1; 
-    static std::string pesce_bonus = "";
     double dist = allGameObj[Canna_OBJ].transform.position.distance(allGameObj[Amo_OBJ].transform.position);
 
+    // reset delle variabili locali
+    if (deltaTime < 0) {
+        floater.set(0.0, 0.0, 0.0);
+        n_pesci = 0;
+        pesci_attivi = 0;
+        theta = 0.0;
+        pesce_interested = false;
+        n_bonus = 1;
+        pesce_bonus = "Trota";
+        std::cout << "Pesce Bonus: " + pesce_bonus + ".\n";
+        return;
+    }
     theta += deltaTime; // angolo da usare per vari calcoli
     floater.set(0, 0, (pesce_interested) ? 0.0 : 0.1 * sin(PI * theta)); // fa galleggiare il pesce
-    if (dist > 0.4) {
-        // se lontano dalla canna, l'amo si muove velocemente verso di essa
-        allGameObj[Amo_OBJ].setVelocity(floater + (allGameObj[Canna_OBJ].transform.position.xy() - allGameObj[Amo_OBJ].transform.position.xy()).asVector3() * 0.4);
-    } else if (dist < 0.05) {
-        // se vicino rallenta
-        allGameObj[Amo_OBJ].setVelocity(floater + (allGameObj[Canna_OBJ].transform.position.xy() - allGameObj[Amo_OBJ].transform.position.xy()).asVector3() * 0.01);
-    } else allGameObj[Amo_OBJ].setVelocity(floater); // se si trova sotto la canna da pesca galleggia e basta
+    double vel;
+    // se un pesce ha abboccato, l'amo si muove più velocemente, perché fuori dall'acqua
+    if (dist > 0.4)
+        vel = ((pesce_hooked) ? 2 : 1) * 0.5; // se lontano dalla canna, l'amo si muove velocemente verso di essa
+    else if (dist < 0.01)
+        vel = ((pesce_hooked) ? 20 : 1) * 0.05; // se vicino all'amo rallenta
+    else vel = 0; // se si trova sotto la canna da pesca galleggia e basta
+    allGameObj[Amo_OBJ].setVelocity(floater + (allGameObj[Canna_OBJ].transform.position.xy() - allGameObj[Amo_OBJ].transform.position.xy()).asVector3() * vel);
     allGameObj[Amo_OBJ].checkCollision(xBound, yBound, 1.0); // mantiene l'amo dentro il laghetto
     for (uint i = 0; i < MAX_Pesci; i++) {
         uint j = pesci_ord[i]; // l'ordine serve a fare in modo che il luccio, che ha il punteggio massimo, abbia meno probabilità di uscire
@@ -1112,94 +1345,105 @@ void updateScene(double deltaTime) {
         switch (state) {
         case pesce_state::pesce_active:
             // normale stato del pesce, esso si muove in giro a una velocità standard dipendente dalla specie
-            if (allGameObj[Amo_OBJ].transform.velocity.xy().magnitude() < 0.1 && allGameObj[pesci[j]].checkCollision(allGameObj[Amo_OBJ])) {
+            if (allGameObj[Amo_OBJ].transform.velocity.xy().magnitude() <= 0.1 && allGameObj[pesci[j]].checkCollision(allGameObj[Amo_OBJ])) {
                 // se l'amo è quasi fermo e collide con un pesce, esso viene attirato dall'esca
                 double facing_angle = 0.0;
-                std::cout << "LOG: Collision(1_point): (" << Amo_OBJ << ", " << pesci[j] << ")\n";
+                //std::cout << "LOG: Collision(1_point): (" << Amo_OBJ << ", " << pesci[j] << ")\n";
                 if (game_state == GameState::GameState_Play && !pesce_interested) {
+                    Vector2 ab = (allGameObj[Amo_OBJ].transform.position.xy() - (allGameObj[pesci[j]].transform.position.xy() + allGameObj[pesci[j]].boundingSphere.position));
+                    double d = ab.magnitude(), r1 = allGameObj[Amo_OBJ].boundingSphere.r, r2 = allGameObj[pesci[j]].boundingSphere.r;
+
+                    if (r1 + r2 - d >= 0.01) {
+                        allGameObj[pesci[j]].translate((ab.normalize() * 2 * (d - (r1 + r2))).asVector3()); // correzione della posizione del pesce se il calcolo avviene in ritardo
+                        std::cout << "LOG: position correction (" << pesci[j] << ") [r1 + r2: " << r1 + r2 << ", d: " << d << "]\n";
+                    }
                     playSound(".\\sounds\\poke_interest.wav");
-                    facing_angle = rad2deg((allGameObj[Canna_OBJ].transform.position - allGameObj[pesci[j]].transform.position).normalize() * Vector3::Polar(1, allGameObj[Canna_OBJ].transform.rotation.z, 0));
+                    facing_angle = rad2deg(acos(allGameObj[pesci[j]].transform.velocity.xy().normalize() * ab.normalize()));
                     allGameObj[pesci[j]].setState((int)pesce_state::pesce_interest); // cambia lo stato
                     allGameObj[pesci[j]].rotate(0, 0, facing_angle); // rivolge la bocca del pesce verso l'amo
-                    allGameObj[pesci[j]].setVelocity(Vector3::Polar(1, deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0.0));
+                    allGameObj[pesci[j]].placeBoundingSphere(Vector2::Polar(pesci_bound[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z)));
+                    //allGameObj[pesci[j]].setVelocity(Vector3::Polar(1, deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0.0));
                     if (allTimers[pesci[j]].isCounting()) allTimers[pesci[j]].stop();  // si assicura che il timer sia fermo
                     allTimers[pesci[j]].start(3.0); // fa partire un timer per vedere se l'amo sta fermo nella durata
                     pesce_interested = true;
                 }
             }
-            //if(allGameObj[Amo_OBJ].checkCollision(allGameObj[pesci[i]])) std::cout << "LOG: Collision(2_box): (" << Amo_OBJ << ", " << pesci[i] << ")\n";
             // se il pesce sbatte contro la parete della vasca
             //if(allGameObj[pesci[j]].checkCollision(allGameObj[Lago_OBJ])){
-            if (allGameObj[pesci[j]].checkCollision(xBound - allGameObj[pesci[j]].boundingBox.dimensions.x, yBound - allGameObj[pesci[j]].boundingBox.dimensions.y, 4.0)) {
+            if (allGameObj[pesci[j]].checkCollision(xBound - pesci_bound[j], yBound - pesci_bound[j], 4.0)) {
                 allGameObj[pesci[j]].rotate(0, 0, 180 - rand() % 60); // ruota in modo da non toccare la parete
+                allGameObj[pesci[j]].placeBoundingSphere(Vector2::Polar(pesci_bound[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z)));
                 allGameObj[pesci[j]].setVelocity(Vector3::Polar(pesci_speed[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0)); // ruota la velocità nella nuova direzione
             }
             break;
         case pesce_state::pesce_interest:
             if (allTimers[pesci[j]].isCounting()) {
-                if (allGameObj[Amo_OBJ].transform.velocity.xy().magnitude() == 0.0) {
-                    allGameObj[pesci[j]].setVelocity(allGameObj[pesci[j]].transform.velocity * sin(PI * theta));
+                if (allGameObj[Amo_OBJ].transform.velocity.xy().magnitude() <= 0.01) {
+                    allGameObj[pesci[j]].setVelocity(Vector3::Polar(pesci_bound[j] * sin(4 * PI * theta), deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0.0));
+                    //allGameObj[pesci[j]].setVelocity(allGameObj[pesci[j]].transform.velocity * sin(6 * PI * theta));
                 } else {
                     playSound(".\\sounds\\scared.wav");
-                    allGameObj[pesci[j]].setState((int)pesce_state::pesce_scared); // il pesce si spaventa e comincia a scappare in giro per la vasca
+                    allGameObj[pesci[j]].setState((int)pesce_state::pesce_scare); // il pesce si spaventa e comincia a scappare in giro per la vasca
                     allGameObj[pesci[j]].setVelocity(Vector3::Polar(4.0 * pesci_speed[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0)); // il pesce si muove più velocemente di prima
+                    allGameObj[pesci[j]].placeBoundingSphere(Vector2::Polar(pesci_bound[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z)));
                     allTimers[pesci[j]].stop(); // viene stoppato il timer e riadibito all'utilizzo per 'pesce_scared'
                     allTimers[pesci[j]].start(5.0); // lo stato 'pesce_scared' ha una durata limitata
                     pesce_interested = false;
                 }
             } else {
                 if (game_state != GameState::GameState_SkillCheck && !allTimers["skillCheck"].isCounting()) {
+                    allGameObj[pesci[j]].setVelocity(Vector3::Origin()); // il pesce si ferma
                     allTimers["skillCheck"].start(); // avvia il timer dello skill check
-                    playSound(".\\sounds\\poke_interest.wav");
+                    // resetta le variabili relative allo skill check
                     game_state = GameState::GameState_SkillCheck; // cambia lo stato del gioco e avvia lo skill check
-                    // Resetta le variabili relative allo skill check
-                    std::cout << "LOG: Start skillcheck.\n";
+                    playSound(".\\sounds\\poke_catch.wav");
+                    check_sequence_generation = false;
                     skill_check_successful = false;
                     skill_check_failed = false;
-                    check_sequence_generation = false;
+                    //std::cout << "LOG: Start skillcheck.\n";
                 } else if (game_state == GameState::GameState_SkillCheck && skill_check_successful) { // se lo skillcheck viene superato
                     allTimers["skillCheck"].stop(); // ferma il timer dello skill check
-                    if (pesci_speed[j] == 0.5) playSound(".\\sounds\\fish_catch_small.wav");
-                    if (pesci_speed[j] == 0.3) playSound(".\\sounds\\fish_catch_medium.wav");
-                    else playSound(".\\sounds\\fish_catch_big.wav");
+                    // applausi
+                    switch (pesci_punti[j]) {
+                    case -5: playSound(".\\sounds\\fish_catch_small.wav"); break;
+                    case 10: case 20: playSound(".\\sounds\\fish_catch_medium.wav"); break;
+                    case 50: playSound(".\\sounds\\fish_catch_big.wav"); break;
+                    default: std::cout << "LOG: sound err " << pesci[j] << ", " << pesci_punti[j] << endl; break;
+                    }
                     // Resetta le variabili relative allo skill check
-                    skill_check_successful = false;
-                    check_sequence_generation = false;
-                    allGameObj[pesci[j]].setState((int)pesce_state::pesce_hooked); // lo stato passa a 'pesce_hooked'
+                    allGameObj[pesci[j]].setState((int)pesce_state::pesce_hook); // lo stato passa a 'pesce_hook'
                     allGameObj[pesci[j]].rotate(0, -90, 0); // il pesce viene messo in verticale
                     allGameObj[Amo_OBJ].setAcceleration(Vector3::K() * 4.0); // l'amo viene alzato come se venisse riavvolta la lenza
+                    allGameObj[Splash_OBJ].resetTransform();
                     allGameObj[Splash_OBJ].place(allGameObj[Amo_OBJ].transform.position.xy().asVector3());
-                    allGameObj[Splash_OBJ].scale(0.3, 0.3, 1.0);
+                    allGameObj[Splash_OBJ].scale(0.1, 0.1, 1.0);
                     allGameObj[Splash_OBJ].show();
-                    allTimers[pesci[j]].stop(); // viene stoppato il timer e riadibito all'utilizzo per 'pesce_hooked'
+                    allTimers[pesci[j]].stop(); // viene stoppato il timer e riadibito all'utilizzo per 'pesce_hook'
                     allTimers[pesci[j]].start(1.5);
                     allGameObj[pesci[j]].place(allGameObj[Amo_OBJ].transform.position);
-                    game_state = GameState::GameState_Play;
+                    pesce_hooked = true;
                 } else if (game_state == GameState::GameState_SkillCheck && (skill_check_failed || !allTimers["skillCheck"].isCounting())) {
                     allTimers["skillCheck"].stop();
                     playSound(".\\sounds\\scared.wav");
-                    skill_check_failed = false;
-                    check_sequence_generation = false;
-                    allGameObj[pesci[j]].setState((int)pesce_state::pesce_scared); // il pesce si spaventa e comincia a scappare in giro per la vasca
+                    allGameObj[pesci[j]].setState((int)pesce_state::pesce_scare); // il pesce si spaventa e comincia a scappare in giro per la vasca
                     allGameObj[pesci[j]].setVelocity(Vector3::Polar(4.0 * pesci_speed[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0)); // il pesce si muove più velocemente di prima
+                    allGameObj[pesci[j]].placeBoundingSphere(Vector2::Polar(pesci_bound[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z)));
                     allTimers[pesci[j]].stop(); // viene stoppato il timer e riadibito all'utilizzo per 'pesce_scared'
                     allTimers[pesci[j]].start(5.0); // lo stato 'pesce_scared' ha una durata limitata
-                    game_state = GameState::GameState_Play;
                     pesce_interested = false;
                 }
             }
             break;
-        case pesce_state::pesce_hooked:
-            if (!allTimers[pesci[j]].isCounting() && allGameObj[Amo_OBJ].transform.acceleration.magnitude() > 0.0) {
-                playSound(".\\sounds\\poke_catch.wav");
+        case pesce_state::pesce_hook:
+            if (!allTimers[pesci[j]].isCounting() && allGameObj[Amo_OBJ].transform.acceleration.magnitude() > 0.01) {
+                playSound(".\\sounds\\poke_hooked.wav");
                 allGameObj[Amo_OBJ].setAcceleration(Vector3::Origin()); // l'amo si ferma
                 allGameObj[Amo_OBJ].setVelocity(Vector3::Origin()); // l'amo si ferma
                 allGameObj[Splash_OBJ].hide();
-                allGameObj[Splash_OBJ].resetTransform();
-            } else allGameObj[Splash_OBJ].scale(1.1, 1.1, 0);
+            } else allGameObj[Splash_OBJ].scale(1.2, 1.2, 1.0); // ingrandisce l'immagine
             // se l'amo si avvicina al secchio, che si trova al margine anteriore sinistro
-            if (allGameObj[Amo_OBJ].transform.position.xy().distance(Vector2(-0.9 * xBound, 0.9 * yBound)) <= 0.3) {
-                if (pesci_speed[j] == 0.5) playSound(".\\sounds\\clap_small.wav");
+            if (allGameObj[Amo_OBJ].transform.position.xy().distance(Vector2(-0.90 * xBound, 0.95 * yBound)) <= 0.3) {
+                if (pesci_speed[j] <= 0.5) playSound(".\\sounds\\clap_small.wav");
                 else playSound(".\\sounds\\clap_big.wav");
                 allGameObj[pesci[j]].setState((int)pesce_state::pesce_inactive); // il pesce viene settato inattivo
                 allGameObj[pesci[j]].hide(); // la mesh non viene renderizzata
@@ -1207,18 +1451,20 @@ void updateScene(double deltaTime) {
                 allGameObj[Amo_OBJ].translate(0.0, 0.0, -allGameObj[Amo_OBJ].transform.position.z); // l'amo viene riposizionato a pelo d'acqua
                 allGameObj[Amo_OBJ].setAcceleration(Vector3::Origin()); // l'amo si ferma
                 allGameObj[Amo_OBJ].setVelocity(Vector3::Origin());
-                // TODO: aggiorna punteggio
-                pesci_attivi--;
                 pesce_interested = false;
-                game_score += pesci_punti[j] * ((stringMatch(pesci[j], pesce_bonus.c_str())) ? 2 : 1);
-                std::cout << "LOG: Ha abboccato " << pesci[j] << ", punti guadagnati: (" << ((pesci_punti[j] > 0) ? "+" : "") << pesci_punti[j] << "), punteggio: " << game_score << "\n";
-            } else allGameObj[pesci[j]].place(allGameObj[Amo_OBJ].transform.position); // il pesce si muove con l'amo
+                pesce_hooked = false;
+                // aggiorna punteggio
+                pesci_attivi--;
+                game_score += pesci_punti[j] * ((stringMatch(pesci[j], pesce_bonus.c_str())) ? 2 : 1); // raddoppia i punti guadagnati se la tipologia di pesce coincide col bonus
+                //std::cout << "LOG: Ha abboccato " << pesci[j] << ", punti guadagnati: (" << ((pesci_punti[j] > 0) ? "+" : "") << pesci_punti[j] << "), punteggio: " << game_score << "\n";
+            } else allGameObj[pesci[j]].place(allGameObj[Amo_OBJ].transform.position - Vector3::K() * pesci_bound[j]); // il pesce si muove con l'amo
             break;
-        case pesce_state::pesce_scared:
+        case pesce_state::pesce_scare:
             // finché il timer continua il pesce è spaventato
-            if (allTimers[pesci[i]].isCounting() && allGameObj[pesci[j]].checkCollision(xBound - allGameObj[pesci[j]].boundingBox.dimensions.x, yBound - allGameObj[pesci[j]].boundingBox.dimensions.y, 1.0 - pesci_depth[j])) {
+            if (allTimers[pesci[j]].isCounting() && allGameObj[pesci[j]].checkCollision(xBound - allGameObj[pesci[j]].boundingSphere.r, yBound - allGameObj[pesci[j]].boundingSphere.r, 1.0 - pesci_depth[j])) {
                 allGameObj[pesci[j]].rotate(0, 0, 180 - rand() % 90);
                 allGameObj[pesci[j]].setVelocity(Vector3::Polar(4.0 * pesci_speed[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0));
+                allGameObj[pesci[j]].placeBoundingSphere(Vector2::Polar(pesci_bound[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z)));
             } else allGameObj[pesci[j]].setState((int)pesce_state::pesce_active); // appena scade il timer il pesce si calma
             break;
         case pesce_state::pesce_inactive: default: break; // se il pesce è inattivo, non fa nulla
@@ -1227,26 +1473,34 @@ void updateScene(double deltaTime) {
     if (!allTimers["spawnFish"].isCounting()) {
         // se i pesci nel laghetto sono meno di 6
         if (pesci_attivi < 6) {
-            // l'ordine permette di controllare il punteggio dato dai vari pesci
-            int i = pesci_ord[n_pesci % MAX_Pesci];
+            // l'ordine permette di controllare la sequenza in cui essi appaiono (spawn)
+            int i = pesci_ord[n_pesci % MAX_Pesci]; // vettore circolare
             int p = rand() % 6; // la posizione viene scelta in maniera randomica
 
             allGameObj[pesci[i]].place(posizioni[p][0], posizioni[p][1], pesci_depth[i]);
             allGameObj[pesci[i]].rotate(0, 0, rand() % 180); // per aggiungere randomicità il pesce ha una rotazione iniziale casuale
             allGameObj[pesci[i]].setVelocity(Vector3::Polar(pesci_speed[i], deg2rad(allGameObj[pesci[i]].transform.rotation.z), 0)); // la velocità viene aggiustata di conseguenza
+            allGameObj[pesci[i]].placeBoundingSphere(Vector2::Polar(pesci_bound[i], deg2rad(allGameObj[pesci[i]].transform.rotation.z))); // applica un offset alla posizione del bounding box
             allGameObj[pesci[i]].setState((int)pesce_state::pesce_active); // il pesce viene attivato
             allGameObj[pesci[i]].show(); // e compare sullo schermo
             n_pesci++;
             pesci_attivi++;
-            std::cout << "LOG: Spawned " << allGameObj[pesci[i]].getName() << " in (" << posizioni[p][0] << ", " << posizioni[p][1] << ") [" << n_pesci << "].\n";
+            //std::cout << "LOG: Spawned " << allGameObj[pesci[i]].getName() << " in (" << posizioni[p][0] << ", " << posizioni[p][1] << ") [" << n_pesci << "].\n";
         }
-        if (n_bonus % 2 == 0) {
+        if (n_bonus % 4 == 0) {
             // imposta il pesce bonus
-            int i = 0, b = pesci_ord[n_pesci % MAX_Pesci - pesci_attivi + rand() % pesci_attivi];
-
-            for (; i < pesci[b].length() && isalpha(pesci[b].at(i)); i++);
-            pesce_bonus = pesci[b].substr(0, i);
-            std::cout << "Pesce Bonus: " + pesce_bonus + ".\n";
+            int b = pesci_ord[(n_pesci - pesci_attivi + rand() % pesci_attivi) % MAX_Pesci];
+            pesce_bonus = "";
+            // il nome del pesce viene ricavato da pesci_punti, poiché essendo valori interi permettono di usare lo switch case
+            switch (pesci_punti[b]) {
+            case 10: pesce_bonus = "Trota"; break;
+            case -5: pesce_bonus = "Persico"; break;
+            case 20: pesce_bonus = "Carpa"; break;
+            case 50: pesce_bonus = "Luccio"; break;
+            default: pesce_bonus = "!ERRORE!"; break;
+            }
+            playSound(".\\sounds\\whistle.wav");
+            //std::cout << "Pesce Bonus: " + pesce_bonus + ".\n";
         }
         n_bonus++;
         allTimers["spawnFish"].start(); // il timer riparte
@@ -1264,15 +1518,15 @@ void doMotion() {
     prev_time = time;
     MainCamera.lookAt(MainCamera.position, allGameObj[Canna_OBJ].transform.position * middle, MainCamera.forward % left);
     if (game_state == GameState::GameState_Play || game_state == GameState::GameState_SkillCheck) {
-        updateScene(deltaTime);
         allGameObj[Amo_OBJ].move(deltaTime);
+        //allGameObj[Amo_OBJ].followBoundingSpere(); // fa in modo che la bounding sphere dell'amo sia fissa su di esso
         for (int i = 0; i < MAX_Pesci; i++) {
             pesce_state ps = (pesce_state)allGameObj[pesci[i]].getState();
             switch (ps) {
             case pesce_state::pesce_active:
             case pesce_state::pesce_interest:
-            case pesce_state::pesce_scared:
-            case pesce_state::pesce_hooked:
+            case pesce_state::pesce_scare:
+            case pesce_state::pesce_hook:
                 allTimers[pesci[i]].pass(deltaTime);
                 allGameObj[pesci[i]].move(deltaTime);
                 break;
@@ -1284,6 +1538,11 @@ void doMotion() {
         allTimers["spawnFish"].pass(deltaTime);
         allTimers["gameTimer"].pass(deltaTime);
         allTimers["skillCheck"].pass(deltaTime);
+        allTimers["displaySkillCheck"].pass(deltaTime);
+        updateScene(deltaTime);
+    } else if (game_state == GameState::GameState_TitleScreen) {
+        if(allTimers["click"].isCounting()) mouseClick(deltaTime);
+        allTimers["click"].pass(deltaTime);
     }
 
     glutPostRedisplay();
@@ -1326,6 +1585,7 @@ void renderScene() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
+        glPushMatrix();
         switch (CurrentState) {
         case menu_state::menu:
             Menu();
@@ -1341,10 +1601,17 @@ void renderScene() {
         case menu_state::scoreboard:
             ScoreBoard();
             break;
+        case menu_state::howToPlay:
+            HowToPlay();
+            break;
         default: break;
         }
+        glPopMatrix();
+        if (allTimers["click"].isCounting())
+            clickResponse.drawOpenGL();
         break;
     case GameState::GameState_SkillCheck:
+    case GameState::GameState_Pause:
     case GameState::GameState_Play:
     case GameState::GameState_End:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1363,6 +1630,18 @@ void renderScene() {
         if (game_state == GameState::GameState_SkillCheck) {
             repaint();
         }
+        if (game_state == GameState::GameState_End) {
+            Quad2D::DrawQuad(Vector2(0.0, 0.2), 0.51, 0.11, ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
+            Quad2D::DrawQuad(Vector2(0.0, 0.2), 0.5, 0.1, "TIME UP!", ColorRGBA::Red(), ColorRGBA::Grey(0.2));
+            Quad2D::DrawQuad(Vector2(0.0, 0.1), 0.71, 0.11, ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
+            Quad2D::DrawQuad(Vector2(0.0, 0.1), 0.7, 0.1, "Final Score: " + std::to_string(game_score), ColorRGBA::Red(), ColorRGBA::Grey(0.2));
+            Quad2D::DrawQuad(Vector2(0.0, -0.25), 0.61, 0.11, ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
+            Quad2D::DrawQuad(Vector2(0.0, -0.25), 0.6, 0.1, "Press Spacebar", ColorRGBA::Red(), ColorRGBA::Grey(0.2));
+        }
+        if (game_state == GameState::GameState_Pause) {
+            Quad2D::DrawQuad(Vector2(0.0, 0.1), 0.51, 0.11, ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
+            Quad2D::DrawQuad(Vector2(0.0, 0.1), 0.4, 0.1, "Pause", ColorRGBA::Red(), ColorRGBA::Grey(0.2));
+        }
         break;
     default: break;
     }
@@ -1370,53 +1649,59 @@ void renderScene() {
     glutSwapBuffers();
 }
 
-void UpdateScoreboard(Scoreboard* records) {
-    const time_t now = time(0);
-    tm ltm;
-    localtime_s(&ltm, &now);
+void resetScene() {
+    game_state = GameState::GameState_TitleScreen;
+    game_score = 0;
+    game_time = SEC_Duration;
 
-    tm ts;
-    ts.tm_year = 1900 + ltm.tm_year;
-    ts.tm_mon = 1 + ltm.tm_mon;
-    ts.tm_mday = ltm.tm_mday;
-    ts.tm_hour = ltm.tm_hour;
-    ts.tm_min = ltm.tm_min;
-    ts.tm_sec = ltm.tm_sec;
-
-    for (int i = 0; i < n_score; i++) {
-        if (game_score >= records[i].score) {
-            for (int j = n_score - 1; j >= i; j--)
-                records[j] = records[j - 1];
-
-            records[i].score = game_score;
-            records[i].timestamp = ts;
-            break;
-        }
-
+    allGameObj[Splash_OBJ].resetTransform();
+    allGameObj[Splash_OBJ].hide();
+    allGameObj[Pugno_OBJ].hide();
+    allGameObj[Amo_OBJ].resetTransform();
+    for (int i = 0; i < 9; i++) {
+        allGameObj[pesci[i]].resetTransform();
+        allGameObj[pesci[i]].hide();
+        allGameObj[pesci[i]].setState((int)pesce_state::pesce_inactive);
+        allTimers[pesci[i]].start(0.0);
     }
+    updateScene(-1.0);
+    allTimers["spawnFish"].start(5.0);
+    allTimers["gameTimer"].start(1.0);
+    allTimers["skillCheck"].start(3.0);
+    allTimers["displaySkillCheck"].start(0.5);
+    stopSounds();
+
+    MainCamera.lookAt(Vector3(-5.0, 0.0, 4.0), Vector3(0.0, 0.0, 0.0), Vector3(0.5, 0.0, 0.5));
+}
+
+void stopDisplaySkillCheck(int a) {
+    n = 0;
+    if(game_time > 0) game_state = GameState::GameState_Play;
+    else game_state = GameState::GameState_End;
+    skill_check_failed = false;
+    skill_check_successful = false;
+    check_sequence_generation = false;
 }
 
 void processNormalKeys(unsigned char key, int x, int y) {
-    static unsigned int n = 0;
+    //static unsigned int n = 0;
     static unsigned int screen_select = 0;
 
     switch (game_state) {
+    case GameState::GameState_TitleScreen:
+        switch (CurrentState) {
+        case menu_state::menu:
+        case menu_state::scoreboard:
+        case menu_state::setDifficulty:
+        case menu_state::howToPlay:
+        default: break;
+        }
     case GameState::GameState_End:
         switch (key) {
         case ' ':
-            game_state = GameState::GameState_TitleScreen;
+            resetScene();
+            loopSound(".\\sounds\\menu_background.wav");
             CurrentState = menu_state::menu;
-            if (left_button) {
-                glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
-                left_button = false;
-            }
-            if (difficulty == difficulty_level::easy)
-                UpdateScoreboard(score_easy);
-            else if (difficulty == difficulty_level::medium)
-                UpdateScoreboard(score_medium);
-            else
-                UpdateScoreboard(score_hard);
-            game_score = 0;
             break;
         }
         break;
@@ -1424,7 +1709,7 @@ void processNormalKeys(unsigned char key, int x, int y) {
         break;
     case GameState::GameState_SkillCheck:
         switch (key) {
-            // W A S D
+        // W A S D
         case 'w':
             if (skill_check_sequence[n] == 'w')
                 n++;
@@ -1465,14 +1750,15 @@ void processNormalKeys(unsigned char key, int x, int y) {
             // Disabilita skill check
             check_sequence_generation = false;
             skill_check_successful = true;
-            std::cout << "Skill check successful!" << endl;
-            n = 0;
+            //std::cout << "Skill check successful!" << endl;
+            allTimers["displaySkillCheck"].start(stopDisplaySkillCheck);
         } else if (n == 0) {
             // Skill check failed
             check_sequence_generation = false;
             skill_check_failed = true;
-            std::cout << "Skill check failed!" << endl;
-        }
+            //std::cout << "Skill check failed!" << endl;
+            allTimers["displaySkillCheck"].start(stopDisplaySkillCheck);
+        } else playSound(".\\sounds\\skill_check_start.wav");
     }
 
     // std::cout << "( " << n << " ) " << key << "\n";
@@ -1482,7 +1768,17 @@ void mouse(int button, int state, int x, int y) {
     switch (game_state) {
     case GameState::GameState_TitleScreen:
         myMouse(button, state, x, y);
-        break;
+        switch (button) {
+        case GLUT_LEFT_BUTTON:
+            if (state == GLUT_DOWN) {
+                left_button = true;
+                playSound(".\\sounds\\click.wav");
+                allTimers["click"].start();
+                clickResponse.position.set(FromPixelToNormalized(x, 1), FromPixelToNormalized(y, -1));
+                clickResponse.dim_y = clickResponse.dim_x * XRES / YRES;
+            } else left_button = false;
+            break;
+        } break;
     case GameState::GameState_Play:
         switch (button) {
         case GLUT_LEFT_BUTTON:
@@ -1501,11 +1797,8 @@ void mouse(int button, int state, int x, int y) {
             }
             break;
         case GLUT_RIGHT_BUTTON:
-            if (state == GLUT_DOWN) {
-                allGameObj[Lago_OBJ].hide();
-            } else if (state == GLUT_UP) {
-                allGameObj[Lago_OBJ].show();
-            }
+            //if (state == GLUT_DOWN) 
+            //else if (state == GLUT_UP) 
             break;
         case GLUT_MIDDLE_BUTTON:
             //if (state == GLUT_DOWN)
@@ -1523,8 +1816,8 @@ void drag_n_drop(int x, int y) {
     int yres = glutGet(GLUT_WINDOW_HEIGHT);
 
     if (game_state == GameState::GameState_Play) {
-        if (x > xres) x = xres - 1;
-        if (y > yres) y = yres - 1;
+        if (x >= xres) x = xres - 1;
+        if (y >= yres) y = yres - 1;
         if (x < 0) x = 1;
         if (y < 0) y = 1;
         // mappatura fra la posizione del puntatore del mouse sullo schermo e le coordinate sul piano xy
@@ -1571,8 +1864,8 @@ int main(int argc, char* argv[]) {
     glutInitWindowSize(XRES, YRES);
     glutCreateWindow("Fishing App");
 
-    //soundEngine = irrklang::createIrrKlangDevice();
-    //if (!soundEngine) std::cout << "ERROR: Could not startup sound engine.\n";
+    soundEngine = irrklang::createIrrKlangDevice();
+    if (!soundEngine) std::cout << "ERROR: Could not startup sound engine.\n";
     
     // OpenGL init
     if (!init(".\\models\\laghetto.obj")) {
@@ -1594,7 +1887,7 @@ int main(int argc, char* argv[]) {
     // enter GLUT event processing cycle
     glutGet(GLUT_ELAPSED_TIME);
     glutMainLoop();
-    //soundEngine->drop();
+    soundEngine->drop();
 
     return 0;
 }

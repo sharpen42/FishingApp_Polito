@@ -73,10 +73,11 @@ void Quad2D::drawOpenGL() {
     bool has_texture = (!texture.isEmpty());
     float c[4];
 
+    glDisable(GL_LIGHTING);
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-    
+
     glPushAttrib(GL_CURRENT_BIT);
     glColor4fv(bg_color.toFloat4(c));
     if (has_texture) {
@@ -112,6 +113,7 @@ void Quad2D::drawOpenGL() {
         glPopAttrib(); // This sets the colour back to its original value
     }
     glPopMatrix();
+    glEnable(GL_LIGHTING);
 }
 
 void Quad2D::DrawQuad(double dx, double dy) {

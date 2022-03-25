@@ -17,8 +17,9 @@ Vector2 Vector2::operator+=(Vector2 v) { sum(v.x, v.y); return *this; }
 Vector2 Vector2::operator*=(double v) { scale(v, v); return *this; }
 
 double Vector2::magnitude() { return sqrt(x * x + y * y); }
+double Vector2::magnitude2() { return (x * x + y * y); }
 Vector2 Vector2::normalize() { double m = magnitude(); return Vector2(x / m, y / m); }
-double Vector2::distance(Vector2 v) { return (x - v.x) * (x - v.x) + (y - v.y) * (y - v.y); }
+double Vector2::distance(Vector2 v) { return sqrt((x - v.x) * (x - v.x) + (y - v.y) * (y - v.y)); }
 double Vector2::dot(Vector2 v) { return x * v.x + y * v.y; }
 double Vector2::cross(Vector2 v) { return x * v.y - y * v.x; }
 Vector2 Vector2::add(Vector2 v) { return Vector2(x + v.x, y + v.y); }
@@ -64,6 +65,7 @@ Vector3 Vector3::operator-=(Vector3 v) { sum(-v.x, -v.y, -v.z); return *this; }
 Vector3 Vector3::operator*=(float f) { scale(f, f, f); return *this; }
 
 double Vector3::magnitude() { return sqrt(x * x + y * y + z * z); }
+double Vector3::magnitude2() { return (x * x + y * y + z * z); }
 Vector3 Vector3::normalize() { double m = magnitude(); if (m != 1.0 && m != 0.0) return Vector3(x / m, y / m, z / m); else return *this; }
 double Vector3::distance(Vector3 v) { return sqrt((x - v.x) * (x - v.x) + (y - v.y) * (y - v.y) + (z - v.z) * (z - v.z)); }
 double Vector3::dot(Vector3 v) { return x * v.x + y * v.y + z * v.z; }

@@ -2,7 +2,7 @@
 #include <GL/glut.h>
 
 #define CURVE_DEF 10
-#define face_n(x) (((x) - ((x) % 3)) / 3)
+#define face_n(x) (((x) - ((x) % 9)) / 9)
 
 const Vector3 I = Vector3(1, 0, 0);
 const Vector3 J = Vector3(0, 1, 0);
@@ -107,60 +107,51 @@ Texture GameObj::addTexture(Texture t0) {
 	return t;
 }
 
-BoundingBox2D GameObj::setBoundingBox2D() {
-	Vector2 max_d = Vector2(-HUGE_VAL, -HUGE_VAL), min_d = Vector2(HUGE_VAL, HUGE_VAL);
-	BoundingBox2D t = boundingBox;
+BoundingSphere2D GameObj::setBoundingSphere2D(double r) {
+	BoundingSphere2D t = boundingSphere;
 	if (mesh.isEmpty()) return t;
-	for (int i = 0; i < mesh.sizeVerts(); i++) {
-		if (min_d.x > mesh.verts[i].x) min_d.x = mesh.verts[i].x;
-		if (min_d.y > mesh.verts[i].y) min_d.y = mesh.verts[i].y;
-		if (max_d.x < mesh.verts[i].x) max_d.x = mesh.verts[i].x;
-		if (max_d.y < mesh.verts[i].y) max_d.y = mesh.verts[i].y;
-	}
-	boundingBox = BoundingBox2D(max(abs(transform.position.x - max_d.x), abs(transform.position.x - min_d.x)), max(abs(transform.position.y - max_d.y), abs(transform.position.y - min_d.y)), transform.position.xy());
+	boundingSphere = BoundingSphere2D(r);
 	return t;
 }
 
-BoundingBox2D GameObj::setBoundingBox2D(double dx, double dy) {
-	BoundingBox2D t = boundingBox;
-	if (mesh.isEmpty()) return t;
-	boundingBox = BoundingBox2D(dx, dy, transform.position.xy());
+BoundingSphere2D GameObj::setBoundingSphere2D(BoundingSphere2D b) {
+	BoundingSphere2D t = boundingSphere;
+	boundingSphere = b;
 	return t;
 }
 
-BoundingBox2D GameObj::setBoundingBox2D(BoundingBox2D b) {
-	BoundingBox2D t = boundingBox;
-	boundingBox = b;
-	return t;
-}
+void GameObj::placeBoundingSphere(Vector2 v) { boundingSphere.position.set(v); }
+void GameObj::placeBoundingSphere(float x, float y) { boundingSphere.position.set(x, y); }
 
 const char* GameObj::getName(){
 	return name.c_str();
 }
 
 
-void GameObj::place(Vector3 p) { 
-	boundingBox.position.x = transform.position.x = p.x; 
-	boundingBox.position.y = transform.position.y = p.y; 
-	transform.position.z = p.z; 
+void GameObj::place(Vector3 p) {
+	//boundingSphere.position.x = transform.position.x = p.x; 
+	//boundingSphere.position.y = transform.position.y = p.y;
+	//transform.position.z = p.z; 
+	transform.position.set(p.x, p.y, p.z);
 }
 
 void GameObj::place(float x, float y, float z) { 
-	boundingBox.position.x = transform.position.x = x; 
-	boundingBox.position.y = transform.position.y = y;
-	transform.position.z = z;
+	//boundingSphere.position.x = transform.position.x = x; 
+	//boundingSphere.position.y = transform.position.y = y;
+	//transform.position.z = z;
+	transform.position.set(x, y, z);
 }
 
 void GameObj::translate(Vector3 t){
 	transform.position.sum(t.x, t.y, t.z);
-	if (!boundingBox.isEmpty())
-		boundingBox.position.sum(t.x, t.y);
+	/*if (!boundingSphere.isEmpty())
+		boundingSphere.position.sum(t.x, t.y);*/
 }
 
 void GameObj::translate(float x, float y, float z){
 	transform.position.sum(x, y, z);
-	if (!boundingBox.isEmpty())
-		boundingBox.position.sum(x, y);
+	/*if (!boundingSphere.isEmpty())
+		boundingSphere.position.sum(x, y);*/
 }
 
 void GameObj::rotate(Vector3 r){
@@ -186,11 +177,12 @@ void GameObj::scale(float x, float y, float z) {
 }
 
 void GameObj::resetTransform() {
-	transform.scale.x = transform.scale.y = transform.scale.z = 1.0;
-	transform.rotation.x = transform.rotation.y = transform.rotation.z = 0.0;
+	transform.scale.set(1.0, 1.0, 1.0);
+	transform.rotation.set(0, 0, 0);
 	transform.position.set(0, 0, 0);
 	transform.velocity.set(0, 0, 0);
 	transform.acceleration.set(0, 0, 0);
+	//boundingSphere.position.set(0, 0);
 }
 
 void GameObj::setVelocity(Vector3 v) { 
@@ -214,10 +206,12 @@ void GameObj::applyForce(double fx, double fy, double fz) {
 }
 
 void GameObj::move(float deltaTime){
-	Vector3 prev_pos = transform.position;
-	transform.move(deltaTime);
-	if(!boundingBox.isEmpty())
-		boundingBox.position.sum((transform.position - prev_pos).xy());
+	//Vector3 prev_pos;
+	//prev_pos.set(transform.position);
+	transform.move(deltaTime);/*
+	if(!boundingSphere.isEmpty())
+		boundingSphere.position.sum((transform.position - prev_pos).xy());
+		*/
 }
 void GameObj::hide() { render = false; }
 void GameObj::show() { render = true;  }
@@ -253,9 +247,11 @@ void GameObj::renderOpenGL() {
 		int V = mesh.sizeFaces();
 
 		glBegin(GL_TRIANGLES);
-		for (int i = 0; i < V; i++) {
+		for (int i = 0; i < V; i += 3) {
 			double p[3] = { 0.0, 0.0, 0.0 };
 			int vertexIndex = mesh.faces[i];
+			int uvIndex = mesh.faces[i + 1];
+			int normIndex = mesh.faces[i + 2];
 			int faceIndex = face_n(i);
 			float c[4] = {0.0, 0.0, 0.0, 1.0};
 			
@@ -265,10 +261,11 @@ void GameObj::renderOpenGL() {
 				glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, materials[faceIndex].specular.toFloat4(c));
 				glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, materials[faceIndex].emission.toFloat4(c));
 			}
+			
 			glColor4fv(materials[faceIndex].diffuse.toFloat4(c));
 			if (has_texture) 
-				glTexCoord2d(mesh.uvs[vertexIndex].x, 1 - mesh.uvs[vertexIndex].y);
-			glNormal3dv(mesh.norms[vertexIndex].toArray(p));
+				glTexCoord2d(mesh.uvs[uvIndex].x, 1 - mesh.uvs[uvIndex].y);
+			glNormal3dv(mesh.norms[normIndex].toArray(p));
 			glVertex3dv(mesh.verts[vertexIndex].toArray(p));
 			prev_faceIndex = faceIndex;
 		}
@@ -278,6 +275,14 @@ void GameObj::renderOpenGL() {
 			texture.UnBind();
 		}
 		glEnd();
+	}
+	if (!boundingSphere.isEmpty()) {
+		glPushMatrix();
+		glColor3i(255, 0, 0);
+		glRotated(-transform.rotation.z, 0, 0, 1);
+		glTranslated(boundingSphere.position.x, boundingSphere.position.y, 0);
+		glutWireSphere(boundingSphere.r, 6, 4);
+		glPopMatrix();
 	}
 	/*
 	if (!curve.isEmpty()) {
@@ -376,11 +381,25 @@ bool GameObj::checkCollision(double xBound, double yBound, double zBound, Vector
 }
 
 bool GameObj::checkCollision(GameObj obj) {
-	return boundingBox.collide(obj.boundingBox);
+	static BoundingSphere2D aa = BoundingSphere2D();
+	static BoundingSphere2D bb = BoundingSphere2D();
+	// si può implementare un adattamento alle rotazioni dei due oggetti
+	//position.set(obj.boundingSphere.position * rotation2D(rot.z) + obj.transform.position.xy());
+	aa.r = boundingSphere.r;
+	aa.position.set(boundingSphere.position + transform.position.xy());
+	bb.r = obj.boundingSphere.r;
+	bb.position.set(obj.boundingSphere.position + obj.transform.position.xy());
+	return aa.collide(bb);
 }
 
-bool GameObj::checkCollision(BoundingBox2D b) {
-	return boundingBox.collide(b); 
+bool GameObj::checkCollision(BoundingSphere2D b) {
+	static BoundingSphere2D aa = BoundingSphere2D();
+	static BoundingSphere2D bb = BoundingSphere2D();
+	aa.r = boundingSphere.r;
+	aa.position.set(boundingSphere.position + transform.position.xy());
+	bb.r = b.r;
+	bb.position.set(b.position + b.position);
+	return aa.collide(bb);
 }
 
 Camera::Camera() {
@@ -428,6 +447,10 @@ bool Camera::hasMoved() {
 	bool t = has_moved;
 	has_moved = false;
 	return t;
+}
+
+Vector2 Camera::onScreen(Vector3 v) {
+	return Vector2();
 }
 
 Mat4x4 translation(double dx, double dy, double dz) {
@@ -478,41 +501,39 @@ Mat4x4 scale(double sx, double sy, double sz) {
 }
 
 
-BoundingBox2D::BoundingBox2D(){
+BoundingSphere2D::BoundingSphere2D(){
 	position = Vector2();
-	dimensions = Vector2();
+	r = 0.0;
 	inside = true;
 }
 
-BoundingBox2D::BoundingBox2D(double dx, double dy) {
+BoundingSphere2D::BoundingSphere2D(double r0) {
 	position = Vector2();
-	dimensions = Vector2(dx, dy);
+	r = r0;
 	inside = true;
 }
 
-BoundingBox2D::BoundingBox2D(double dx, double dy, Vector2 v) {
+BoundingSphere2D::BoundingSphere2D(double r0, Vector2 v) {
 	position = Vector2(v.x, v.y);
-	dimensions = Vector2(dx, dy);
+	r = r0;
 	inside = true;
 }
 
-bool BoundingBox2D::isEmpty() { return (dimensions.x == 0.0 && dimensions.y == 0.0 && position.x == 0.0 && position.y == 0.0); }
+bool BoundingSphere2D::isEmpty() { return (r == 0.0 && position.x == 0.0 && position.y == 0.0); }
 
-bool BoundingBox2D::collide(Vector2 v) {
-	Vector2 t = v - position;
-	bool res = (abs(t.x) < dimensions.x && abs(t.y) < dimensions.y);
-	if (inside)	return (res);
-	else return !(res);
+bool BoundingSphere2D::collide(Vector2 v) {
+	Vector2 t = position - v;
+	if(abs(t.x) <= 1 || abs(t.y) <= 1) return (inside && (t.magnitude() <= r));
+	else return (inside && (t.magnitude2() <= r));
 }
 
-bool BoundingBox2D::collide(BoundingBox2D b) {
-	Vector2 ab = position - b.position;
-	bool res = ((abs(ab.x) < dimensions.x + b.dimensions.x) && (abs(ab.y) < dimensions.y + b.dimensions.y));
-	if (b.inside)	return (res);
-	else return (!res);
+bool BoundingSphere2D::collide(BoundingSphere2D b) {
+	Vector2 t = position - b.position;
+	if (abs(t.x) <= 1 || abs(t.x) <= 1) return (inside && (t.magnitude() <= r + b.r));
+	else return (inside && (t.magnitude2() <= r + b.r));
 }
 
-double BoundingBox2D::getX() { return position.x; }
-double BoundingBox2D::getY() { return position.y; }
-void BoundingBox2D::setOutside() { inside = false; }
-void BoundingBox2D::setInside() { inside = true; }
+double BoundingSphere2D::getX() { return position.x; }
+double BoundingSphere2D::getY() { return position.y; }
+void BoundingSphere2D::setOutside() { inside = false; }
+void BoundingSphere2D::setInside() { inside = true; }

@@ -9,6 +9,7 @@ private:
 	ColorRGBA bg_color, text_color;
 	Texture texture;
 	bool over;
+
 public:
 	Vector2 position;
 	double dim_x, dim_y;

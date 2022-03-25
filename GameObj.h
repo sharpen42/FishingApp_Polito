@@ -16,7 +16,7 @@
 class Transform;
 class GameObj;
 class Camera;
-class BoundingBox2D;
+class BoundingSphere2D;
 
 class Transform {
 public:
@@ -29,19 +29,20 @@ public:
 	void move(double dt);
 };
 
-class BoundingBox2D {
+class BoundingSphere2D {
 private:
 	bool inside;
 public:
-	Vector2 position, dimensions;
+	Vector2 position;
+	double r;
 
-	BoundingBox2D();
-	BoundingBox2D(double dimx, double dimy);
-	BoundingBox2D(double dimx, double dimy, Vector2 position);
+	BoundingSphere2D();
+	BoundingSphere2D(double r);
+	BoundingSphere2D(double r, Vector2 position);
 
 	bool isEmpty();
 	bool collide(Vector2);
-	bool collide(BoundingBox2D);
+	bool collide(BoundingSphere2D);
 	double getX();
 	double getY();
 	void setOutside();
@@ -58,7 +59,7 @@ public:
 	Curve curve;
 	Transform transform;
 	std::map<int, Material> materials;
-	BoundingBox2D boundingBox;
+	BoundingSphere2D boundingSphere;
 	Texture texture;
 
 	GameObj();
@@ -69,9 +70,10 @@ public:
 	Mesh addMesh(Mesh m); // returns previous mesh
 	Curve addCurve(Curve c); // returns previous curve
 	Texture addTexture(Texture t);
-	BoundingBox2D setBoundingBox2D();
-	BoundingBox2D setBoundingBox2D(double dx, double dy);
-	BoundingBox2D setBoundingBox2D(BoundingBox2D);
+	BoundingSphere2D setBoundingSphere2D(double r);
+	BoundingSphere2D setBoundingSphere2D(BoundingSphere2D);
+	void placeBoundingSphere(Vector2);
+	void placeBoundingSphere(float x, float y);
 	const char* getName();
 	void place(Vector3 p);
 	void place(float x, float y, float z);
@@ -94,7 +96,7 @@ public:
 	bool checkCollision(double bx, double by, double bz);
 	bool checkCollision(double xBound, double yBound, double zBound, Vector3 v);
 	bool checkCollision(GameObj);
-	bool checkCollision(BoundingBox2D);
+	bool checkCollision(BoundingSphere2D);
 };
 
 class Camera {
@@ -111,6 +113,7 @@ public:
 	void translate(float x, float y, float z);
 	void lookAt(Vector3 position, Vector3 focus, Vector3 up);
 	bool hasMoved();
+	Vector2 onScreen(Vector3);
 };
 
 Mat4x4 translation(double dx, double dy, double dz);

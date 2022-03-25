@@ -34,6 +34,7 @@ public:
 	Vector3 operator*=(float);
 
 	double magnitude();
+	double magnitude2();
 	Vector3 normalize();
 	double distance(Vector3 v);
 	double dot(Vector3 v);
@@ -82,6 +83,7 @@ public:
 	Vector2 operator*=(double);     // scale by a constant
 
 	double magnitude();
+	double magnitude2();
 	Vector2 normalize();
 	double distance(Vector2 v);
 	double dot(Vector2 v);
