@@ -1351,12 +1351,14 @@ void updateScene(double deltaTime) {
                 //std::cout << "LOG: Collision(1_point): (" << Amo_OBJ << ", " << pesci[j] << ")\n";
                 if (game_state == GameState::GameState_Play && !pesce_interested) {
                     Vector2 ab = (allGameObj[Amo_OBJ].transform.position.xy() - (allGameObj[pesci[j]].transform.position.xy() + allGameObj[pesci[j]].boundingSphere.position));
+                    /*
                     double d = ab.magnitude(), r1 = allGameObj[Amo_OBJ].boundingSphere.r, r2 = allGameObj[pesci[j]].boundingSphere.r;
 
                     if (r1 + r2 - d >= 0.01) {
                         allGameObj[pesci[j]].translate((ab.normalize() * 2 * (d - (r1 + r2))).asVector3()); // correzione della posizione del pesce se il calcolo avviene in ritardo
                         std::cout << "LOG: position correction (" << pesci[j] << ") [r1 + r2: " << r1 + r2 << ", d: " << d << "]\n";
                     }
+                    */
                     playSound(".\\sounds\\poke_interest.wav");
                     facing_angle = rad2deg(acos(allGameObj[pesci[j]].transform.velocity.xy().normalize() * ab.normalize()));
                     allGameObj[pesci[j]].setState((int)pesce_state::pesce_interest); // cambia lo stato

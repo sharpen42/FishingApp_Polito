@@ -381,25 +381,35 @@ bool GameObj::checkCollision(double xBound, double yBound, double zBound, Vector
 }
 
 bool GameObj::checkCollision(GameObj obj) {
+	// uso delle bounding spheres 'dummy' preallocate, i cui attributi vengono assegnati ad ogni chiamata
 	static BoundingSphere2D aa = BoundingSphere2D();
 	static BoundingSphere2D bb = BoundingSphere2D();
 	// si può implementare un adattamento alle rotazioni dei due oggetti
-	//position.set(obj.boundingSphere.position * rotation2D(rot.z) + obj.transform.position.xy());
+	//position.set(obj.boundingSphere.position * rotation2D(obj.rot.z) + obj.transform.position.xy());
 	aa.r = boundingSphere.r;
 	aa.position.set(boundingSphere.position + transform.position.xy());
 	bb.r = obj.boundingSphere.r;
 	bb.position.set(obj.boundingSphere.position + obj.transform.position.xy());
 	return aa.collide(bb);
+	/*
+	* // correzione della posizione dell'oggetto
+	* // si corregge sempre la posizione di obj
+	if (aa.collide(bb)) { 
+
+		(...) 
+
+		return true; 
+	} 
+	else return false;
+	*/
 }
 
 bool GameObj::checkCollision(BoundingSphere2D b) {
+	// uso una bounding sphere 'dummy' preallocata, i cui attributi vengono assegnati ad ogni chiamata
 	static BoundingSphere2D aa = BoundingSphere2D();
-	static BoundingSphere2D bb = BoundingSphere2D();
 	aa.r = boundingSphere.r;
 	aa.position.set(boundingSphere.position + transform.position.xy());
-	bb.r = b.r;
-	bb.position.set(b.position + b.position);
-	return aa.collide(bb);
+	return aa.collide(b);
 }
 
 Camera::Camera() {

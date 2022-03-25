@@ -95,7 +95,7 @@ public:
 	void renderOpenGL();
 	bool checkCollision(double bx, double by, double bz);
 	bool checkCollision(double xBound, double yBound, double zBound, Vector3 v);
-	bool checkCollision(GameObj);
+	bool checkCollision(GameObj obj); // wip: corregge la posizione di 'obj'
 	bool checkCollision(BoundingSphere2D);
 };
 
