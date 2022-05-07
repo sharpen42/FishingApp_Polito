@@ -14,7 +14,7 @@ Timer::Timer() {
 	id = ++timer_n;
 }
 
-Timer::Timer(double match0){
+Timer::Timer(double match0) {
 	status = timer_state::timer_inactive;
 	count = 0.0;
 	match = match0;
@@ -22,8 +22,7 @@ Timer::Timer(double match0){
 	id = ++timer_n;
 }
 
-bool Timer::start()
-{
+bool Timer::start() {
 	if (match > 0.0 && status == timer_state::timer_inactive || status == timer_state::timer_ended || status == timer_state::timer_stopped) {
 		status = timer_state::timer_counting;
 		count = 0.0;
@@ -32,8 +31,7 @@ bool Timer::start()
 	return false;
 }
 
-bool Timer::start(float c)
-{
+bool Timer::start(float c) {
 	if (status == timer_state::timer_inactive || status == timer_state::timer_ended || status == timer_state::timer_stopped) {
 		status = timer_state::timer_counting;
 		match = c;
@@ -43,8 +41,7 @@ bool Timer::start(float c)
 	return false;
 }
 
-bool Timer::start(void(*atEnd0)(int))
-{
+bool Timer::start(void(*atEnd0)(int)) {
 	if (status == timer_state::timer_inactive || status == timer_state::timer_ended || status == timer_state::timer_stopped) {
 		status = timer_state::timer_counting;
 		count = 0.0;
@@ -54,8 +51,7 @@ bool Timer::start(void(*atEnd0)(int))
 	return false;
 }
 
-bool Timer::pass(float time)
-{
+bool Timer::pass(float time) {
 	if (status == timer_state::timer_counting) {
 		count += time;
 		if (count >= match) {
@@ -68,8 +64,7 @@ bool Timer::pass(float time)
 	return false;
 }
 
-bool Timer::stop()
-{
+bool Timer::stop() {
 	if (status == timer_state::timer_counting) {
 		status = timer_state::timer_stopped;
 		return true;
@@ -77,8 +72,7 @@ bool Timer::stop()
 	return false;
 }
 
-bool Timer::go()
-{
+bool Timer::go() {
 	if (status == timer_state::timer_stopped) {
 		status = timer_state::timer_counting;
 		return true;

@@ -29,6 +29,8 @@ Quad2D::Quad2D() {
 	bg_color = ColorRGBA();
 	text_color = ColorRGBA::White();
 	position = Vector2();
+    scale = Vector2(1.0, 1.0);
+    rotation = 0;
     dim_x = dim_y = 0;
     over = false;
 }
@@ -38,6 +40,8 @@ Quad2D::Quad2D(double dx, double dy) {
 	bg_color = ColorRGBA::White();
 	text_color = ColorRGBA::Black();
 	position = Vector2();
+    scale = Vector2(1.0, 1.0);
+    rotation = 0;
 	dim_x = dx / 2;
 	dim_y = dy / 2;
     over = false;
@@ -48,6 +52,8 @@ Quad2D::Quad2D(Vector2 v, double dx, double dy) {
 	bg_color = ColorRGBA::White();
 	text_color = ColorRGBA::Black();
 	position = Vector2(v.x, v.y);
+    scale = Vector2(1.0, 1.0);
+    rotation = 0;
 	dim_x = dx / 2;
 	dim_y = dy / 2;
     over = false;
@@ -78,6 +84,10 @@ void Quad2D::drawOpenGL() {
     glPushMatrix();
     glLoadIdentity();
 
+    glTranslated(position.x, position.y, 0);
+    glScaled(scale.x, scale.y, 1.0);
+    glRotated(rotation, 0, 0, 1.0);
+
     glPushAttrib(GL_CURRENT_BIT);
     glColor4fv(bg_color.toFloat4(c));
     if (has_texture) {
@@ -85,6 +95,17 @@ void Quad2D::drawOpenGL() {
         texture.Bind();
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glBegin(GL_QUADS);
+    if (has_texture) glTexCoord2f(0, 1);
+    glVertex2d(-dim_x, -dim_y); //sx in basso
+    if (has_texture) glTexCoord2f(1, 1);
+    glVertex2d(dim_x, -dim_y); //dx in basso
+    if (has_texture) glTexCoord2f(1, 0);
+    glVertex2d(dim_x, dim_y); //dx in alto
+    if (has_texture) glTexCoord2f(0, 0);
+    glVertex2d(-dim_x, dim_y); //sx in alto
+    glEnd();
+    /*
     glBegin(GL_QUADS);
     if (has_texture) glTexCoord2f(0, 1);
     glVertex2d(position.x - dim_x, position.y - dim_y); //sx in basso
@@ -95,6 +116,7 @@ void Quad2D::drawOpenGL() {
     if (has_texture) glTexCoord2f(0, 0);
     glVertex2d(position.x - dim_x, position.y + dim_y); //sx in alto
     glEnd();
+    */
     if (has_texture) {
         texture.UnBind();
         glDisable(GL_TEXTURE_2D);
@@ -105,10 +127,15 @@ void Quad2D::drawOpenGL() {
         gluOrtho2D(0, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), 0);
         glPushAttrib(GL_CURRENT_BIT);
         glColor4fv(text_color.toFloat4(c));
+        g_output(screen2pixels(0, glutGet(GLUT_WINDOW_WIDTH)) - glutBitmapLength(FONT, (const unsigned char*)text.c_str()) / 2,
+                 screen2pixels(0, glutGet(GLUT_WINDOW_HEIGHT)) + 8,
+                 text);
 
+        /*
         g_output(screen2pixels(position.x, glutGet(GLUT_WINDOW_WIDTH)) - glutBitmapLength(FONT, (const unsigned char*)text.c_str()) / 2,
                  screen2pixels(-position.y, glutGet(GLUT_WINDOW_HEIGHT)) + 8,
                  text);
+        */
 
         glPopAttrib(); // This sets the colour back to its original value
     }
@@ -151,3 +178,5 @@ void Quad2D::DrawQuad(Vector2 v, double dx, double dy, std::string s, ColorRGBA 
     q.applyText(s, tx);
     q.drawOpenGL();
 }
+
+ColorRGBA Quad2D::getColor() { return ColorRGBA(bg_color); }

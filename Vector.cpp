@@ -10,6 +10,7 @@ bool Vector2::operator==(Vector2 v) { return (x == v.x && y == v.y); }
 bool Vector2::operator!=(Vector2 v) { return (x != v.x || y != v.y); }
 Vector2 Vector2::operator+(Vector2 v) { return add(v); }
 Vector2 Vector2::operator-(Vector2 v) { return sub(v); }
+Vector2 Vector2::operator*(Mat3x3 m) { return mult(m); }
 double Vector2::operator*(Vector2 v) { return dot(v); }
 Vector2 Vector2::operator*(double a) { return mult(a); }
 double Vector2::operator%(Vector2 v) { return cross(v); }
@@ -25,6 +26,10 @@ double Vector2::cross(Vector2 v) { return x * v.y - y * v.x; }
 Vector2 Vector2::add(Vector2 v) { return Vector2(x + v.x, y + v.y); }
 Vector2 Vector2::sub(Vector2 v) { return Vector2(x - v.x, y - v.y); }
 Vector2 Vector2::mult(double a) { return Vector2(a * x, a * y); }
+Vector2 Vector2::mult(Mat3x3 m) {
+	return Vector2(m.getElement(0,0) * x + m.getElement(0, 1) * y + m.getElement(0, 2), 
+				   m.getElement(1, 0) * x + m.getElement(1, 1) * y + m.getElement(1, 2));
+}
 Vector2 Vector2::sum(Vector2 v) { x += v.x; y += v.y; return *this; }
 Vector2 Vector2::sum(double dx, double dy) { x += dx; y += dy; return *this; }
 Vector2 Vector2::scale(double sx, double sy) { x *= sx; y *= sy; return *this; }
@@ -192,6 +197,33 @@ Mat3x3 Mat3x3::transpose()
 }
 
 double* Mat3x3::toArray(){ return elements; }
+
+Mat3x3 Mat3x3::rotation(double theta) {
+	double a[] = {
+		cos(theta), -sin(theta), 0,
+		sin(theta), cos(theta), 0,
+		0, 0, 1
+	};
+	return Mat3x3(a);
+}
+
+Mat3x3 Mat3x3::translation(double tx, double ty) {
+	double a[] = {
+		1, 0, tx,
+		0, 1, ty,
+		0, 0, 1
+	};
+	return Mat3x3(a);
+}
+
+Mat3x3 Mat3x3::scale(double sx, double sy) {
+	double a[] = {
+		sx, 0, 0,
+		0, sy, 0,
+		0, 0, 1
+	};
+	return Mat3x3(a);
+}
 
 Mat4x4::Mat4x4() {
 	for (int i = 0; i < 16; i++) {

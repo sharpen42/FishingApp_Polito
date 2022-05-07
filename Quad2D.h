@@ -11,8 +11,8 @@ private:
 	bool over;
 
 public:
-	Vector2 position;
-	double dim_x, dim_y;
+	Vector2 position, scale;
+	double dim_x, dim_y, rotation;
 
 	Quad2D();
 	Quad2D(double, double);
@@ -34,4 +34,5 @@ public:
 	static void DrawQuad(Vector2 pos, double dx, double dy, std::string, ColorRGBA text, ColorRGBA background);
 	static void DrawQuad(Vector2 pos, double dx, double dy, std::string, ColorRGBA text, Texture texture);
 
+	ColorRGBA getColor();
 };

@@ -76,6 +76,7 @@ public:
 	bool operator!=(Vector2);
 	Vector2 operator+(Vector2);
 	Vector2 operator-(Vector2);
+	Vector2 operator*(Mat3x3);     // dot product
 	double operator*(Vector2);     // dot product
 	double operator%(Vector2);     // cross product
 	Vector2 operator*(double);     // scale by a constant
@@ -91,6 +92,7 @@ public:
 	Vector2 add(Vector2 v);
 	Vector2 sub(Vector2 v);
 	Vector2 mult(double a);
+	Vector2 mult(Mat3x3 m);
 	Vector2 sum(Vector2 v);
 	Vector2 sum(double dx, double dy);
 	Vector2 scale(double sx, double sy);
@@ -122,6 +124,10 @@ public:
 	Mat3x3 mult(Mat3x3 m);
 	Mat3x3 transpose();
 	double* toArray();
+
+	static Mat3x3 rotation(double theta);
+	static Mat3x3 translation(double tx, double ty);
+	static Mat3x3 scale(double sx, double sy);
 };
 
 class Mat4x4 {

@@ -16,6 +16,7 @@
 
 #define MAX_Pesci 9
 #define SEC_Duration 100
+#define scratio XRES / YRES
 
 #define deg2rad(x) ((x) * (2 * PI) / 360.0)
 #define rad2deg(x) ((x) * 360.0 / (2 * PI))
@@ -42,7 +43,7 @@ enum class read_state : unsigned int {
 };
 
 enum class pesce_state : unsigned int {
-    pesce_null, pesce_inactive, pesce_active, pesce_interest, pesce_hook, pesce_scare
+    pesce_null, pesce_inactive, pesce_active, pesce_interest, pesce_hook, pesce_scare, pesce_rotate
 };
 
 enum class menu_state : unsigned int {
@@ -88,7 +89,9 @@ int match_menu = 0;
 
 irrklang::ISoundEngine* soundEngine;
 
+Quad2D rot_fish = Quad2D(Vector2(-0.7, -0.7), 0.6, 0.225);
 Quad2D clickResponse = Quad2D(0.1, 0.1);
+map<std::string, Texture> pesci_texture;
 
 bool left_button = false;
 bool skill_check_successful = false;
@@ -109,11 +112,12 @@ int game_score = 0;
 int game_time = SEC_Duration;
 
 const std::string pesci[MAX_Pesci] = {
-        "Trota0_6", "Trota1_7", "Trota2_8",
-        "Persico0_9", "Persico1_10", "Persico2_11",
-        "Carpa0_12", "Carpa1_13",
-        "Luccio0_14"
+    "Trota0_6", "Trota1_7", "Trota2_8",
+    "Persico0_9", "Persico1_10", "Persico2_11",
+    "Carpa0_12", "Carpa1_13",
+    "Luccio0_14"
 };
+
 
 // prototipi
 void changeSize(int w, int h);
@@ -258,7 +262,7 @@ void InitMenu() {
     difficulty_buttons[2] = Quad2D(Vector2(0, -0.20), 0.8, 0.1);
     difficulty_buttons[2].applyText("Hard", ColorRGBA::White());
 
-    back = Quad2D(Vector2(0.9, 0.9), 0.1, 0.1 * XRES / YRES);
+    back = Quad2D(Vector2(0.9, 0.9), 0.1, 0.1 * scratio);
     //back.applyTexture(Texture(".\\models\\textures\\back_button_2.png"));
 
     score_buttons[0] = Quad2D(Vector2(0, 0.2), 0.2, 0.1);
@@ -633,7 +637,7 @@ void Menu() {
     static Texture tex = Texture(".\\models\\textures\\logo_main.png");
    
     Quad2D::DrawQuad(Vector2(), 2, 2, background);
-    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * XRES / YRES, tex);
+    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * scratio, tex);
     //Quad2D::DrawQuad(Vector2(), 2, 2, ColorRGBA(0xE6, 0x99, 0xC0, 0x34)); // color: 0xE699C0
 
     for (int i = 0; i < n_buttons; i++) {
@@ -685,10 +689,10 @@ void SetDifficulty() {
     static Texture tex = Texture(".\\models\\textures\\logo_difficulty.png");
 
     Quad2D::DrawQuad(Vector2(), 2, 2, background);
-    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * XRES / YRES, tex);
+    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * scratio, tex);
 
     back.applyTexture(back_button_tex[(back.isOver()) ? 1 : 0]);
-    back.dim_y = back.dim_x * XRES / YRES;
+    back.dim_y = back.dim_x * scratio;
     back.drawOpenGL();
     for (int i = 0; i < n_difficulty_buttons; i++) {
         Quad2D::DrawQuad(difficulty_buttons[i].position, difficulty_buttons[i].dim_x * 2 + 0.01, difficulty_buttons[i].dim_y * 2 + 0.01, ColorRGBA(0.8f, 0.8f, 0.2f, 1.0f));
@@ -778,10 +782,10 @@ void ScoreBoard() {
     tm ts;
 
     Quad2D::DrawQuad(Vector2(), 2, 2, background);
-    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * XRES / YRES, tex);
+    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * scratio, tex);
 
     back.applyTexture(back_button_tex[(back.isOver()) ? 1 : 0]);
-    back.dim_y = back.dim_x * XRES / YRES;
+    back.dim_y = back.dim_x * scratio;
     back.drawOpenGL();
     Quad2D::DrawQuad(Vector2(0, 0.35), 0.61, 0.11, ColorRGBA::Grey(0.2));
     switch (difficulty) {
@@ -911,10 +915,10 @@ void HowToPlay() {
     Quad2D::DrawQuad(Vector2(), 2, 2, background);
 
     back.applyTexture(back_button_tex[(back.isOver()) ? 1 : 0]);
-    back.dim_y = back.dim_x * XRES / YRES;
+    back.dim_y = back.dim_x * scratio;
     back.drawOpenGL();
     Quad2D::DrawQuad(Vector2(0, -0.3), 1.5, 1.2, htp);
-    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * XRES / YRES, tex);
+    Quad2D::DrawQuad(Vector2(0, 0.6), 1, 0.3 * scratio, tex);
 }
 
 void mouseClick(double deltaTime) {
@@ -924,12 +928,12 @@ void mouseClick(double deltaTime) {
     if (left_button) {
         alpha = 0.6f;
         clickResponse.dim_x = 0.01;
-        clickResponse.dim_y = 0.01;
+        clickResponse.dim_y = 0.01 * scratio;
     }
     alpha -= deltaTime * 2.5;
     if (alpha > 0.0) {
         clickResponse.dim_x += deltaTime * 0.5;
-        clickResponse.dim_y += deltaTime * 0.5;
+        clickResponse.dim_y += deltaTime * 0.5 * scratio;
         w.setAlpha(alpha);
     }
     else w.setAlpha(0);
@@ -1140,13 +1144,14 @@ void prepareScene() {
     background = Texture(".\\models\\textures\\render_sfondo.png");
     back_button_tex[0] = Texture(".\\models\\textures\\back_button.png");
     back_button_tex[1] = Texture(".\\models\\textures\\back_button_2.png");
+    rot_fish.applyColor(ColorRGBA());
 
     allGameObj[Splash_OBJ].hide();
     allGameObj[Pugno_OBJ].hide();
     allGameObj[Amo_OBJ].setBoundingSphere2D(SCALE * 0.1);
     for (int i = 0; i < 9; i++) {
         allGameObj[pesci[i]].hide();
-        allGameObj[pesci[i]].setBoundingSphere2D(SCALE * pesci_bound[i]);
+        allGameObj[pesci[i]].setBoundingSphere2D(BoundingSphere2D(SCALE * pesci_bound[i], Vector2(2 * pesci_bound[i], 0)));
         allGameObj[pesci[i]].setState((int)pesce_state::pesce_inactive);
         allTimers[pesci[i]] = Timer();
     }
@@ -1166,6 +1171,7 @@ void prepareScene() {
     
     loopSound(".\\sounds\\menu_background.wav");
     MainCamera.lookAt(Vector3(-5.0, 0.0, 4.0), Vector3(0.0, 0.0, 0.0), Vector3(0.5, 0.0, 0.5));
+    //MainCamera.lookAt(Vector3(-10.0, 0.0, 6.0), Vector3(0.0, 0.0, 0.0), Vector3(0.5, 0.0, 0.5)); // se lo stagno fosse più grande
 
     match_menu = glutCreateMenu(HandleMatch);
     glutAddMenuEntry("Pause", 1);
@@ -1230,7 +1236,7 @@ void repaint() {
             default: break;
             }
         }
-        Quad2D::DrawQuad(Vector2(((double)i - sequence_length / 2) * 0.3 + 0.15, 0.0), 0.3, 0.3 * XRES / YRES, letter);
+        Quad2D::DrawQuad(Vector2(((double)i - sequence_length / 2) * 0.3 + 0.15, 0.0), 0.3, 0.3 * scratio, letter);
     }
     /*
     glMatrixMode(GL_PROJECTION);
@@ -1261,19 +1267,18 @@ void repaint() {
 
 void printScore() {
     static Texture cloud = Texture(".\\models\\textures\\cloud.png");
-    static map<std::string, Texture> pesci;
     static bool once = true;
 
     if (once) {
-        pesci["Trota"] = Texture(".\\models\\textures\\thumbnail_Trota.png");
-        pesci["Persico"] = Texture(".\\models\\textures\\thumbnail_Persico.png");
-        pesci["Carpa"] = Texture(".\\models\\textures\\thumbnail_Carpa.png");
-        pesci["Luccio"] = Texture(".\\models\\textures\\thumbnail_Luccio.png");
+        pesci_texture["Trota"] = Texture(".\\models\\textures\\thumbnail_Trota.png");
+        pesci_texture["Persico"] = Texture(".\\models\\textures\\thumbnail_Persico.png");
+        pesci_texture["Carpa"] = Texture(".\\models\\textures\\thumbnail_Carpa.png");
+        pesci_texture["Luccio"] = Texture(".\\models\\textures\\thumbnail_Luccio.png");
         once = false;
     }
 
-    Quad2D::DrawQuad(Vector2(0.0, 0.9), 0.5, 0.4 * XRES / YRES, cloud);
-    Quad2D::DrawQuad(Vector2(0.0, 0.9), 0.4, 0.15 * XRES / YRES, pesci[pesce_bonus]);
+    Quad2D::DrawQuad(Vector2(0.0, 0.9), 0.5, 0.4 * scratio, cloud);
+    Quad2D::DrawQuad(Vector2(0.0, 0.9), 0.4, 0.15 * scratio, pesci_texture[pesce_bonus]);
     Quad2D::DrawQuad(Vector2(0.0, 0.78), 0.3, 0.1, "Bonus x2", ColorRGBA(0.4f, 0.4f, 0.1f, 1.0f), ColorRGBA());
     Quad2D::DrawQuad(Vector2(-0.8, 0.9), 0.26, 0.11, ColorRGBA(0.6f, 0.6f, 0.2f, 1.0f));
     Quad2D::DrawQuad(Vector2(-0.8, 0.9), 0.25, 0.1, "Score: " + std::to_string(game_score), ColorRGBA::White(), ColorRGBA::Grey(0.2));
@@ -1297,6 +1302,7 @@ void printScore() {
     */
 }
 
+
 void updateScene(double deltaTime) {
     static const double pesci_bound[MAX_Pesci] = { 0.2, 0.2, 0.2, 0.15, 0.15, 0.15, 0.3, 0.3, 0.5 };
     static const double pesci_depth[MAX_Pesci] = { -0.2, -0.2, -0.2, -0.1, -0.1, -0.1, -0.3, -0.3, -0.4 };
@@ -1304,16 +1310,17 @@ void updateScene(double deltaTime) {
     static const int pesci_punti[MAX_Pesci] = { 10, 10, 10, -5, -5, -5, 20, 20, 50 };
     static const uint pesci_ord[MAX_Pesci] = { 0, 3, 6, 1, 8, 4, 2, 7, 5 };
     static const double posizioni[6][2] = {
-        {-0.3 * xBound, 0.3 * yBound}, {0, 0.3 * yBound}, {0.3 * xBound, 0.3 * yBound},
-        {-0.3 * xBound,-0.3 * yBound}, {0,-0.3 * yBound}, {0.3 * xBound,-0.3 * yBound}
+        {-0.3 * xBound, 0.3 * yBound}, {0.0, 0.3 * yBound}, {0.3 * xBound, 0.3 * yBound},
+        {-0.3 * xBound,-0.3 * yBound}, {0.0,-0.3 * yBound}, {0.3 * xBound,-0.3 * yBound}
     };
     static Vector3 floater = Vector3();
     static uint n_pesci = 0;
     static uint pesci_attivi = 0;
-    static double theta = 0.0;
+    static double theta = 0.0, rot_pesce = 0.0;
     static bool pesce_interested = false; // indica se un pesce è attaccato alla lenza
     static bool pesce_hooked = false;
-    static int n_bonus = 1; 
+    static int n_bonus = 1;
+    static ColorRGBA transparency = ColorRGBA::White();
     double dist = allGameObj[Canna_OBJ].transform.position.distance(allGameObj[Amo_OBJ].transform.position);
 
     // reset delle variabili locali
@@ -1342,29 +1349,20 @@ void updateScene(double deltaTime) {
     for (uint i = 0; i < MAX_Pesci; i++) {
         uint j = pesci_ord[i]; // l'ordine serve a fare in modo che il luccio, che ha il punteggio massimo, abbia meno probabilità di uscire
         pesce_state state = (pesce_state)allGameObj[pesci[j]].getState(); // per non dover fare il cast
+        Vector2 ab;
+        double facing_angle = 0.0;
         switch (state) {
         case pesce_state::pesce_active:
             // normale stato del pesce, esso si muove in giro a una velocità standard dipendente dalla specie
             if (allGameObj[Amo_OBJ].transform.velocity.xy().magnitude() <= 0.1 && allGameObj[pesci[j]].checkCollision(allGameObj[Amo_OBJ])) {
                 // se l'amo è quasi fermo e collide con un pesce, esso viene attirato dall'esca
-                double facing_angle = 0.0;
                 //std::cout << "LOG: Collision(1_point): (" << Amo_OBJ << ", " << pesci[j] << ")\n";
                 if (game_state == GameState::GameState_Play && !pesce_interested) {
-                    Vector2 ab = (allGameObj[Amo_OBJ].transform.position.xy() - (allGameObj[pesci[j]].transform.position.xy() + allGameObj[pesci[j]].boundingSphere.position));
-                    /*
-                    double d = ab.magnitude(), r1 = allGameObj[Amo_OBJ].boundingSphere.r, r2 = allGameObj[pesci[j]].boundingSphere.r;
-
-                    if (r1 + r2 - d >= 0.01) {
-                        allGameObj[pesci[j]].translate((ab.normalize() * 2 * (d - (r1 + r2))).asVector3()); // correzione della posizione del pesce se il calcolo avviene in ritardo
-                        std::cout << "LOG: position correction (" << pesci[j] << ") [r1 + r2: " << r1 + r2 << ", d: " << d << "]\n";
-                    }
-                    */
                     playSound(".\\sounds\\poke_interest.wav");
+                    ab = allGameObj[Amo_OBJ].transform.position.xy() - allGameObj[pesci[j]].transform.position.xy();
                     facing_angle = rad2deg(acos(allGameObj[pesci[j]].transform.velocity.xy().normalize() * ab.normalize()));
-                    allGameObj[pesci[j]].setState((int)pesce_state::pesce_interest); // cambia lo stato
                     allGameObj[pesci[j]].rotate(0, 0, facing_angle); // rivolge la bocca del pesce verso l'amo
-                    allGameObj[pesci[j]].placeBoundingSphere(Vector2::Polar(pesci_bound[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z)));
-                    //allGameObj[pesci[j]].setVelocity(Vector3::Polar(1, deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0.0));
+                    allGameObj[pesci[j]].setState((int)pesce_state::pesce_interest); // cambia lo stato
                     if (allTimers[pesci[j]].isCounting()) allTimers[pesci[j]].stop();  // si assicura che il timer sia fermo
                     allTimers[pesci[j]].start(3.0); // fa partire un timer per vedere se l'amo sta fermo nella durata
                     pesce_interested = true;
@@ -1374,20 +1372,19 @@ void updateScene(double deltaTime) {
             //if(allGameObj[pesci[j]].checkCollision(allGameObj[Lago_OBJ])){
             if (allGameObj[pesci[j]].checkCollision(xBound - pesci_bound[j], yBound - pesci_bound[j], 4.0)) {
                 allGameObj[pesci[j]].rotate(0, 0, 180 - rand() % 60); // ruota in modo da non toccare la parete
-                allGameObj[pesci[j]].placeBoundingSphere(Vector2::Polar(pesci_bound[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z)));
                 allGameObj[pesci[j]].setVelocity(Vector3::Polar(pesci_speed[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0)); // ruota la velocità nella nuova direzione
             }
             break;
         case pesce_state::pesce_interest:
             if (allTimers[pesci[j]].isCounting()) {
                 if (allGameObj[Amo_OBJ].transform.velocity.xy().magnitude() <= 0.01) {
-                    allGameObj[pesci[j]].setVelocity(Vector3::Polar(pesci_bound[j] * sin(4 * PI * theta), deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0.0));
-                    //allGameObj[pesci[j]].setVelocity(allGameObj[pesci[j]].transform.velocity * sin(6 * PI * theta));
+                    double osc = pesci_bound[j] * sin(4 * PI * theta);
+                    allGameObj[pesci[j]].setVelocity(Vector3::Polar(osc, deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0.0));
+                    if(abs(osc - pesci_bound[j]) < 0.1) playSound(".\\sounds\\poke_interest.wav");
                 } else {
                     playSound(".\\sounds\\scared.wav");
                     allGameObj[pesci[j]].setState((int)pesce_state::pesce_scare); // il pesce si spaventa e comincia a scappare in giro per la vasca
                     allGameObj[pesci[j]].setVelocity(Vector3::Polar(4.0 * pesci_speed[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0)); // il pesce si muove più velocemente di prima
-                    allGameObj[pesci[j]].placeBoundingSphere(Vector2::Polar(pesci_bound[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z)));
                     allTimers[pesci[j]].stop(); // viene stoppato il timer e riadibito all'utilizzo per 'pesce_scared'
                     allTimers[pesci[j]].start(5.0); // lo stato 'pesce_scared' ha una durata limitata
                     pesce_interested = false;
@@ -1395,7 +1392,7 @@ void updateScene(double deltaTime) {
             } else {
                 if (game_state != GameState::GameState_SkillCheck && !allTimers["skillCheck"].isCounting()) {
                     allGameObj[pesci[j]].setVelocity(Vector3::Origin()); // il pesce si ferma
-                    allTimers["skillCheck"].start(); // avvia il timer dello skill check
+                    allTimers["skillCheck"].start(2.0 + 2.0 * (game_time / SEC_Duration)); // avvia il timer dello skill check
                     // resetta le variabili relative allo skill check
                     game_state = GameState::GameState_SkillCheck; // cambia lo stato del gioco e avvia lo skill check
                     playSound(".\\sounds\\poke_catch.wav");
@@ -1429,7 +1426,6 @@ void updateScene(double deltaTime) {
                     playSound(".\\sounds\\scared.wav");
                     allGameObj[pesci[j]].setState((int)pesce_state::pesce_scare); // il pesce si spaventa e comincia a scappare in giro per la vasca
                     allGameObj[pesci[j]].setVelocity(Vector3::Polar(4.0 * pesci_speed[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0)); // il pesce si muove più velocemente di prima
-                    allGameObj[pesci[j]].placeBoundingSphere(Vector2::Polar(pesci_bound[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z)));
                     allTimers[pesci[j]].stop(); // viene stoppato il timer e riadibito all'utilizzo per 'pesce_scared'
                     allTimers[pesci[j]].start(5.0); // lo stato 'pesce_scared' ha una durata limitata
                     pesce_interested = false;
@@ -1445,9 +1441,22 @@ void updateScene(double deltaTime) {
             } else allGameObj[Splash_OBJ].scale(1.2, 1.2, 1.0); // ingrandisce l'immagine
             // se l'amo si avvicina al secchio, che si trova al margine anteriore sinistro
             if (allGameObj[Amo_OBJ].transform.position.xy().distance(Vector2(-0.90 * xBound, 0.95 * yBound)) <= 0.3) {
+                string specie_pesce;
                 if (pesci_speed[j] <= 0.5) playSound(".\\sounds\\clap_small.wav");
-                else playSound(".\\sounds\\clap_big.wav");
-                allGameObj[pesci[j]].setState((int)pesce_state::pesce_inactive); // il pesce viene settato inattivo
+                else playSound(".\\sounds\\clap_big.wav"); 
+                switch (pesci_punti[j]) {
+                case 10: specie_pesce = "Trota"; break;
+                case -5: specie_pesce = "Persico"; break;
+                case 20: specie_pesce = "Carpa"; break;
+                case 50: specie_pesce = "Luccio"; break;
+                default: specie_pesce = "!ERRORE!"; break;
+                }
+                rot_fish.applyTexture(pesci_texture[specie_pesce]);
+                transparency.setAlpha(1.0);
+                rot_pesce = 0.0;
+                allTimers[pesci[j]].stop();
+                allTimers[pesci[j]].start(4.0);
+                allGameObj[pesci[j]].setState((int)pesce_state::pesce_rotate); // il pesce viene settato inattivo
                 allGameObj[pesci[j]].hide(); // la mesh non viene renderizzata
                 allGameObj[pesci[j]].rotate(0, 90, 0); // la rotazione viene resettata
                 allGameObj[Amo_OBJ].translate(0.0, 0.0, -allGameObj[Amo_OBJ].transform.position.z); // l'amo viene riposizionato a pelo d'acqua
@@ -1466,8 +1475,21 @@ void updateScene(double deltaTime) {
             if (allTimers[pesci[j]].isCounting() && allGameObj[pesci[j]].checkCollision(xBound - allGameObj[pesci[j]].boundingSphere.r, yBound - allGameObj[pesci[j]].boundingSphere.r, 1.0 - pesci_depth[j])) {
                 allGameObj[pesci[j]].rotate(0, 0, 180 - rand() % 90);
                 allGameObj[pesci[j]].setVelocity(Vector3::Polar(4.0 * pesci_speed[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z), 0));
-                allGameObj[pesci[j]].placeBoundingSphere(Vector2::Polar(pesci_bound[j], deg2rad(allGameObj[pesci[j]].transform.rotation.z)));
             } else allGameObj[pesci[j]].setState((int)pesce_state::pesce_active); // appena scade il timer il pesce si calma
+            break;
+        case pesce_state::pesce_rotate:
+            if (allTimers[pesci[j]].isCounting()) {
+                double k0 = 20; // curvatura
+                double k1 = allTimers[pesci[j]].match; // tempo di azzeramento
+                rot_pesce += deltaTime;
+                rot_fish.scale.x = sin(2 * PI * rot_pesce);
+                if (transparency.getAlphaf() > 0)
+                    transparency.setAlpha(1.0f - exp(k0 * (rot_pesce - k1) / k1));  
+            } else {
+                allGameObj[pesci[j]].setState((int) pesce_state::pesce_inactive);
+                transparency.setAlpha(0.0);
+            }
+            rot_fish.applyColor(transparency);
             break;
         case pesce_state::pesce_inactive: default: break; // se il pesce è inattivo, non fa nulla
         }
@@ -1478,11 +1500,9 @@ void updateScene(double deltaTime) {
             // l'ordine permette di controllare la sequenza in cui essi appaiono (spawn)
             int i = pesci_ord[n_pesci % MAX_Pesci]; // vettore circolare
             int p = rand() % 6; // la posizione viene scelta in maniera randomica
-
             allGameObj[pesci[i]].place(posizioni[p][0], posizioni[p][1], pesci_depth[i]);
             allGameObj[pesci[i]].rotate(0, 0, rand() % 180); // per aggiungere randomicità il pesce ha una rotazione iniziale casuale
             allGameObj[pesci[i]].setVelocity(Vector3::Polar(pesci_speed[i], deg2rad(allGameObj[pesci[i]].transform.rotation.z), 0)); // la velocità viene aggiustata di conseguenza
-            allGameObj[pesci[i]].placeBoundingSphere(Vector2::Polar(pesci_bound[i], deg2rad(allGameObj[pesci[i]].transform.rotation.z))); // applica un offset alla posizione del bounding box
             allGameObj[pesci[i]].setState((int)pesce_state::pesce_active); // il pesce viene attivato
             allGameObj[pesci[i]].show(); // e compare sullo schermo
             n_pesci++;
@@ -1516,7 +1536,8 @@ void doMotion() {
     double deltaTime;
     int time = glutGet(GLUT_ELAPSED_TIME);
 
-    deltaTime = ((double)time - (double)prev_time) * 0.001; // in seconds
+    if (prev_time == 0) deltaTime = 0.001;
+    else deltaTime = ((double)time - (double)prev_time) * 0.001; // in seconds
     prev_time = time;
     MainCamera.lookAt(MainCamera.position, allGameObj[Canna_OBJ].transform.position * middle, MainCamera.forward % left);
     if (game_state == GameState::GameState_Play || game_state == GameState::GameState_SkillCheck) {
@@ -1525,12 +1546,14 @@ void doMotion() {
         for (int i = 0; i < MAX_Pesci; i++) {
             pesce_state ps = (pesce_state)allGameObj[pesci[i]].getState();
             switch (ps) {
+            case pesce_state::pesce_rotate:
             case pesce_state::pesce_active:
             case pesce_state::pesce_interest:
             case pesce_state::pesce_scare:
             case pesce_state::pesce_hook:
                 allTimers[pesci[i]].pass(deltaTime);
                 allGameObj[pesci[i]].move(deltaTime);
+                break;
                 break;
             case pesce_state::pesce_inactive:
             default:
@@ -1628,6 +1651,8 @@ void renderScene() {
             allGameObj[orderedObjs[i]].renderOpenGL(); 
         }
         glPopMatrix();
+        rot_fish.drawOpenGL();
+        //rot_fish.drawOpenGL();
         printScore();
         if (game_state == GameState::GameState_SkillCheck) {
             repaint();
@@ -1777,7 +1802,7 @@ void mouse(int button, int state, int x, int y) {
                 playSound(".\\sounds\\click.wav");
                 allTimers["click"].start();
                 clickResponse.position.set(FromPixelToNormalized(x, 1), FromPixelToNormalized(y, -1));
-                clickResponse.dim_y = clickResponse.dim_x * XRES / YRES;
+                clickResponse.dim_y = clickResponse.dim_x * scratio;
             } else left_button = false;
             break;
         } break;

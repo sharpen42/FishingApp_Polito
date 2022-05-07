@@ -153,14 +153,12 @@
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Color.cpp" />
     <ClCompile Include="Quad2D.cpp" />
-    <ClCompile Include="stb_image.cpp" />
     <ClCompile Include="Timer.cpp" />
     <ClCompile Include="Vector.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameObj.h" />
     <ClInclude Include="Quad2D.h" />
-    <ClInclude Include="stb_image.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Vector.h" />
     <ClInclude Include="Mesh.h" />

@@ -129,29 +129,19 @@ const char* GameObj::getName(){
 
 
 void GameObj::place(Vector3 p) {
-	//boundingSphere.position.x = transform.position.x = p.x; 
-	//boundingSphere.position.y = transform.position.y = p.y;
-	//transform.position.z = p.z; 
 	transform.position.set(p.x, p.y, p.z);
 }
 
-void GameObj::place(float x, float y, float z) { 
-	//boundingSphere.position.x = transform.position.x = x; 
-	//boundingSphere.position.y = transform.position.y = y;
-	//transform.position.z = z;
+void GameObj::place(float x, float y, float z) {
 	transform.position.set(x, y, z);
 }
 
 void GameObj::translate(Vector3 t){
 	transform.position.sum(t.x, t.y, t.z);
-	/*if (!boundingSphere.isEmpty())
-		boundingSphere.position.sum(t.x, t.y);*/
 }
 
 void GameObj::translate(float x, float y, float z){
 	transform.position.sum(x, y, z);
-	/*if (!boundingSphere.isEmpty())
-		boundingSphere.position.sum(x, y);*/
 }
 
 void GameObj::rotate(Vector3 r){
@@ -182,7 +172,6 @@ void GameObj::resetTransform() {
 	transform.position.set(0, 0, 0);
 	transform.velocity.set(0, 0, 0);
 	transform.acceleration.set(0, 0, 0);
-	//boundingSphere.position.set(0, 0);
 }
 
 void GameObj::setVelocity(Vector3 v) { 
@@ -206,12 +195,7 @@ void GameObj::applyForce(double fx, double fy, double fz) {
 }
 
 void GameObj::move(float deltaTime){
-	//Vector3 prev_pos;
-	//prev_pos.set(transform.position);
-	transform.move(deltaTime);/*
-	if(!boundingSphere.isEmpty())
-		boundingSphere.position.sum((transform.position - prev_pos).xy());
-		*/
+	transform.move(deltaTime);
 }
 void GameObj::hide() { render = false; }
 void GameObj::show() { render = true;  }
@@ -276,14 +260,15 @@ void GameObj::renderOpenGL() {
 		}
 		glEnd();
 	}
+	/* // Show bounding sphere
 	if (!boundingSphere.isEmpty()) {
 		glPushMatrix();
 		glColor3i(255, 0, 0);
-		glRotated(-transform.rotation.z, 0, 0, 1);
 		glTranslated(boundingSphere.position.x, boundingSphere.position.y, 0);
 		glutWireSphere(boundingSphere.r, 6, 4);
 		glPopMatrix();
 	}
+	*/
 	/*
 	if (!curve.isEmpty()) {
 		if (curve.sizePoints() == 4) {
@@ -387,9 +372,9 @@ bool GameObj::checkCollision(GameObj obj) {
 	// si può implementare un adattamento alle rotazioni dei due oggetti
 	//position.set(obj.boundingSphere.position * rotation2D(obj.rot.z) + obj.transform.position.xy());
 	aa.r = boundingSphere.r;
-	aa.position.set(boundingSphere.position + transform.position.xy());
+	aa.position.set(boundingSphere.position * Mat3x3::rotation(transform.rotation.z) + transform.position.xy());
 	bb.r = obj.boundingSphere.r;
-	bb.position.set(obj.boundingSphere.position + obj.transform.position.xy());
+	bb.position.set(obj.boundingSphere.position * Mat3x3::rotation(obj.transform.rotation.z) + obj.transform.position.xy());
 	return aa.collide(bb);
 	/*
 	* // correzione della posizione dell'oggetto
@@ -534,13 +519,13 @@ bool BoundingSphere2D::isEmpty() { return (r == 0.0 && position.x == 0.0 && posi
 bool BoundingSphere2D::collide(Vector2 v) {
 	Vector2 t = position - v;
 	if(abs(t.x) <= 1 || abs(t.y) <= 1) return (inside && (t.magnitude() <= r));
-	else return (inside && (t.magnitude2() <= r));
+	else return (inside && (t.magnitude2() <= r * r));
 }
 
 bool BoundingSphere2D::collide(BoundingSphere2D b) {
 	Vector2 t = position - b.position;
 	if (abs(t.x) <= 1 || abs(t.x) <= 1) return (inside && (t.magnitude() <= r + b.r));
-	else return (inside && (t.magnitude2() <= r + b.r));
+	else return (inside && (t.magnitude2() <= r * r + b.r * b.r));
 }
 
 double BoundingSphere2D::getX() { return position.x; }
