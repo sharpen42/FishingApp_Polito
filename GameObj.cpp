@@ -260,8 +260,8 @@ void GameObj::renderOpenGL() {
 		}
 		glEnd();
 	}
-	/* // Show bounding sphere
-	if (!boundingSphere.isEmpty()) {
+	// Show bounding sphere
+	/* if (!boundingSphere.isEmpty()) {
 		glPushMatrix();
 		glColor3i(255, 0, 0);
 		glTranslated(boundingSphere.position.x, boundingSphere.position.y, 0);
@@ -269,6 +269,7 @@ void GameObj::renderOpenGL() {
 		glPopMatrix();
 	}
 	*/
+	// Curves (not used)
 	/*
 	if (!curve.isEmpty()) {
 		if (curve.sizePoints() == 4) {
@@ -370,7 +371,7 @@ bool GameObj::checkCollision(GameObj obj) {
 	static BoundingSphere2D aa = BoundingSphere2D();
 	static BoundingSphere2D bb = BoundingSphere2D();
 	// si può implementare un adattamento alle rotazioni dei due oggetti
-	//position.set(obj.boundingSphere.position * rotation2D(obj.rot.z) + obj.transform.position.xy());
+	//position.set(obj.boundingSphere.position * rotation2D(obj.transform.rotation.z) + obj.transform.position.xy());
 	aa.r = boundingSphere.r;
 	aa.position.set(boundingSphere.position * Mat3x3::rotation(transform.rotation.z) + transform.position.xy());
 	bb.r = obj.boundingSphere.r;

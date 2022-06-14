@@ -1,5 +1,3 @@
 ﻿  MainGameLoop.cpp
-C:\Users\Stefano\Documents\PoliTO\Informatica grafica\Progetto_2021\applicazione\FishingApp\FishingApp\MainGameLoop.cpp(1228,22): warning C4018: '<': signed/unsigned mismatch
-  Quad2D.cpp
-  Generating Code...
+C:\Users\Stefano\Documents\PoliTO\Informatica grafica\Progetto_2021\applicazione\FishingApp\FishingApp\MainGameLoop.cpp(1230,22): warning C4018: '<': signed/unsigned mismatch
   FishingApp.vcxproj -> C:\Users\Stefano\Documents\PoliTO\Informatica grafica\Progetto_2021\applicazione\FishingApp\FishingApp\Debug\release\FishingApp.exe

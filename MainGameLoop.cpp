@@ -141,7 +141,7 @@ bool stringMatch(string s, const char* match) {
 // riproduci suono
 //*****************//
 void playSound(std::string path) {
-    soundEngine->play2D(path.c_str());
+    //soundEngine->play2D(path.c_str());
     //PlaySound(LPCWSTR(path.c_str()), NULL, SND_ASYNC | SND_FILENAME);
 } 
 
@@ -150,7 +150,7 @@ void playSound(std::string path) {
 //*************************//
 void loopSound(std::string path) {
     // riproduci suono in loop
-    soundEngine->play2D(path.c_str(), true);
+    //soundEngine->play2D(path.c_str(), true);
     //PlaySound(LPCWSTR(path.c_str()), NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
 } 
 
@@ -1141,14 +1141,16 @@ void prepareScene() {
 
     game_state = GameState::GameState_TitleScreen;
     game_score = 0;
-    background = Texture(".\\models\\textures\\render_sfondo.png");
+    //background = Texture(".\\models\\textures\\render_sfondo.png");
+    background = Texture(".\\models\\textures\\render_sfondo.jpg");
     back_button_tex[0] = Texture(".\\models\\textures\\back_button.png");
     back_button_tex[1] = Texture(".\\models\\textures\\back_button_2.png");
     rot_fish.applyColor(ColorRGBA());
 
-    allGameObj[Splash_OBJ].hide();
+    allGameObj[Splash_OBJ].hide(); 
+    allGameObj[Splash_OBJ].scale(0.1, 0.1, 1.0);
     allGameObj[Pugno_OBJ].hide();
-    allGameObj[Amo_OBJ].setBoundingSphere2D(SCALE * 0.1);
+    allGameObj[Amo_OBJ].setBoundingSphere2D(SCALE * 0.2);
     for (int i = 0; i < 9; i++) {
         allGameObj[pesci[i]].hide();
         allGameObj[pesci[i]].setBoundingSphere2D(BoundingSphere2D(SCALE * pesci_bound[i], Vector2(2 * pesci_bound[i], 0)));
@@ -1302,7 +1304,6 @@ void printScore() {
     */
 }
 
-
 void updateScene(double deltaTime) {
     static const double pesci_bound[MAX_Pesci] = { 0.2, 0.2, 0.2, 0.15, 0.15, 0.15, 0.3, 0.3, 0.5 };
     static const double pesci_depth[MAX_Pesci] = { -0.2, -0.2, -0.2, -0.1, -0.1, -0.1, -0.3, -0.3, -0.4 };
@@ -1346,6 +1347,7 @@ void updateScene(double deltaTime) {
     else vel = 0; // se si trova sotto la canna da pesca galleggia e basta
     allGameObj[Amo_OBJ].setVelocity(floater + (allGameObj[Canna_OBJ].transform.position.xy() - allGameObj[Amo_OBJ].transform.position.xy()).asVector3() * vel);
     allGameObj[Amo_OBJ].checkCollision(xBound, yBound, 1.0); // mantiene l'amo dentro il laghetto
+
     for (uint i = 0; i < MAX_Pesci; i++) {
         uint j = pesci_ord[i]; // l'ordine serve a fare in modo che il luccio, che ha il punteggio massimo, abbia meno probabilità di uscire
         pesce_state state = (pesce_state)allGameObj[pesci[j]].getState(); // per non dover fare il cast
@@ -1355,7 +1357,7 @@ void updateScene(double deltaTime) {
         case pesce_state::pesce_active:
             // normale stato del pesce, esso si muove in giro a una velocità standard dipendente dalla specie
             if (allGameObj[Amo_OBJ].transform.velocity.xy().magnitude() <= 0.1 && allGameObj[pesci[j]].checkCollision(allGameObj[Amo_OBJ])) {
-                // se l'amo è quasi fermo e collide con un pesce, esso viene attirato dall'esca
+                // se l'amo è quasi fermo e collide con un pesce, esso viene attirato
                 //std::cout << "LOG: Collision(1_point): (" << Amo_OBJ << ", " << pesci[j] << ")\n";
                 if (game_state == GameState::GameState_Play && !pesce_interested) {
                     playSound(".\\sounds\\poke_interest.wav");
@@ -1392,7 +1394,7 @@ void updateScene(double deltaTime) {
             } else {
                 if (game_state != GameState::GameState_SkillCheck && !allTimers["skillCheck"].isCounting()) {
                     allGameObj[pesci[j]].setVelocity(Vector3::Origin()); // il pesce si ferma
-                    allTimers["skillCheck"].start(2.0 + 2.0 * (game_time / SEC_Duration)); // avvia il timer dello skill check
+                    allTimers["skillCheck"].start(4.0); // avvia il timer dello skill check
                     // resetta le variabili relative allo skill check
                     game_state = GameState::GameState_SkillCheck; // cambia lo stato del gioco e avvia lo skill check
                     playSound(".\\sounds\\poke_catch.wav");
@@ -1438,7 +1440,7 @@ void updateScene(double deltaTime) {
                 allGameObj[Amo_OBJ].setAcceleration(Vector3::Origin()); // l'amo si ferma
                 allGameObj[Amo_OBJ].setVelocity(Vector3::Origin()); // l'amo si ferma
                 allGameObj[Splash_OBJ].hide();
-            } else allGameObj[Splash_OBJ].scale(1.2, 1.2, 1.0); // ingrandisce l'immagine
+            } else allGameObj[Splash_OBJ].scale(1.0 + 1.6 * deltaTime, 1.0 + 1.6 * deltaTime, 1.0); // ingrandisce l'immagine
             // se l'amo si avvicina al secchio, che si trova al margine anteriore sinistro
             if (allGameObj[Amo_OBJ].transform.position.xy().distance(Vector2(-0.90 * xBound, 0.95 * yBound)) <= 0.3) {
                 string specie_pesce;
@@ -1478,6 +1480,7 @@ void updateScene(double deltaTime) {
             } else allGameObj[pesci[j]].setState((int)pesce_state::pesce_active); // appena scade il timer il pesce si calma
             break;
         case pesce_state::pesce_rotate:
+            // fa spuntare il pesce appena pescato vicino al secchio
             if (allTimers[pesci[j]].isCounting()) {
                 double k0 = 20; // curvatura
                 double k1 = allTimers[pesci[j]].match; // tempo di azzeramento
@@ -1651,8 +1654,9 @@ void renderScene() {
             allGameObj[orderedObjs[i]].renderOpenGL(); 
         }
         glPopMatrix();
+
         rot_fish.drawOpenGL();
-        //rot_fish.drawOpenGL();
+        
         printScore();
         if (game_state == GameState::GameState_SkillCheck) {
             repaint();
@@ -1681,8 +1685,9 @@ void resetScene() {
     game_score = 0;
     game_time = SEC_Duration;
 
-    allGameObj[Splash_OBJ].resetTransform();
     allGameObj[Splash_OBJ].hide();
+    allGameObj[Splash_OBJ].resetTransform();
+    allGameObj[Splash_OBJ].scale(0.1, 0.1, 1.0);
     allGameObj[Pugno_OBJ].hide();
     allGameObj[Amo_OBJ].resetTransform();
     for (int i = 0; i < 9; i++) {
@@ -1733,7 +1738,7 @@ void processNormalKeys(unsigned char key, int x, int y) {
         }
         break;
     case GameState::GameState_Play:
-        break;
+        //switch (key) { case ' ': break; }
     case GameState::GameState_SkillCheck:
         switch (key) {
         // W A S D
@@ -1792,6 +1797,7 @@ void processNormalKeys(unsigned char key, int x, int y) {
 }
 
 void mouse(int button, int state, int x, int y) {
+    static Vector3 on_screen = Vector3(), dist = Vector3();
     switch (game_state) {
     case GameState::GameState_TitleScreen:
         myMouse(button, state, x, y);
@@ -1824,8 +1830,8 @@ void mouse(int button, int state, int x, int y) {
             }
             break;
         case GLUT_RIGHT_BUTTON:
-            //if (state == GLUT_DOWN) 
-            //else if (state == GLUT_UP) 
+            //if (state == GLUT_DOWN)
+            //else if (state == GLUT_UP)
             break;
         case GLUT_MIDDLE_BUTTON:
             //if (state == GLUT_DOWN)
@@ -1857,7 +1863,6 @@ void drag_n_drop(int x, int y) {
             allGameObj[Canna_OBJ].translate(delta);
             allGameObj[Rocchetto_OBJ].translate(delta);
             allGameObj[Pugno_OBJ].translate(delta);
-
             //std::cout << "Amo.vel(" << allGameObj[Amo_OBJ].transform.velocity.x << ", " << allGameObj[Amo_OBJ].transform.velocity.y << ")\n";
         }
     }

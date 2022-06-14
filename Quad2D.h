@@ -31,6 +31,7 @@ public:
 	static void DrawQuad(Vector2 pos, double dx, double dy);
 	static void DrawQuad(Vector2 pos, double dx, double dy, Texture texture);
 	static void DrawQuad(Vector2 pos, double dx, double dy, ColorRGBA color);
+	static void DrawQuad(Vector2 pos, double dx, double dy, ColorRGBA color, Texture texture);
 	static void DrawQuad(Vector2 pos, double dx, double dy, std::string, ColorRGBA text, ColorRGBA background);
 	static void DrawQuad(Vector2 pos, double dx, double dy, std::string, ColorRGBA text, Texture texture);
 

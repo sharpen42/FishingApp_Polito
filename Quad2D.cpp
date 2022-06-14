@@ -165,6 +165,13 @@ void Quad2D::DrawQuad(Vector2 v, double dx, double dy, ColorRGBA c) {
     q.drawOpenGL();
 }
 
+void Quad2D::DrawQuad(Vector2 v, double dx, double dy, ColorRGBA c, Texture t) {
+    Quad2D q = Quad2D(v, dx, dy);
+    q.applyColor(c);
+    q.applyTexture(t);
+    q.drawOpenGL();
+}
+
 void Quad2D::DrawQuad(Vector2 v, double dx, double dy, std::string s, ColorRGBA tx, ColorRGBA bg) {
     Quad2D q = Quad2D(v, dx, dy);
     q.applyColor(bg);
